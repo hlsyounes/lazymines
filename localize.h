@@ -13,20 +13,16 @@
 #include "strings.h"
 
 
-extern struct LocaleInfo   li;
-
-
-STRPTR __asm
-GetString (
-   register __a0 struct LocaleInfo *li,
-   register __d0 LONG stringNum);
-
 void
 init_locale (
    char  *catalog);
 
 void
 finalize_locale (void);
+
+char *
+localized_string (
+   LONG   string_num);
 
 struct Menu *
 CreateLocMenus (

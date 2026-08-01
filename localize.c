@@ -16,7 +16,13 @@
 
 struct Library   *LocaleBase = NULL;
 
-struct LocaleInfo   li;
+static struct LocaleInfo   li;
+
+
+STRPTR __asm
+GetString (
+   register __a0 struct LocaleInfo *li,
+   register __d0 LONG stringNum);
 
 
 void
@@ -39,6 +45,13 @@ finalize_locale (void)
       CloseCatalog (li.li_Catalog);
       CloseLibrary (LocaleBase);
    }
+}
+
+char *
+localized_string (
+   LONG   string_num)
+{
+   return (char *)GetString (&li, string_num);
 }
 
 struct Menu *

@@ -28,7 +28,7 @@ static BPTR   dir_lock = NULL;
 static char   prg_name[256];
 
 /* where to put the toolvalues */
-extern char   *pubscr_name;
+extern char    pubscr_name[];
 extern UBYTE   current_level;
 extern BOOL    place_warnings;
 extern BOOL    safe_opening;

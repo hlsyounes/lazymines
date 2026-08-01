@@ -10,11 +10,13 @@
 #include "localize.h"
 #include "requesters.h"
 #include "tooltypes.h"
+#include "highscores.h"
 #include "field.h"
 #include "counter.h"
 #include "layout.h"
 #include "images.h"
 #include "game.h"
+#include "timer.h"
 
 #include <clib/exec_protos.h>
 #include <clib/gadtools_protos.h>
@@ -28,12 +30,12 @@ void __regargs _CXBRK (void) {}
 
 
 #define PRG_NAME        "LazyMines"
-#define VERSION_NO      "2.0"
-#define CREATION_YEAR   "1994"
+#define VERSION_NO      "2.3"
+#define CREATION_YEAR   "1994-1995"
 #define AUTHOR          "Lorens Younes"
 #define MAIL_ADDRESS    "(d93-hyo@nada.kth.se)"
 
-STRPTR version = "$VER: LazyMines 2.0";
+STRPTR version = "$VER: LazyMines 2.3 (8.2.95)";
 
 
 void event_loop (void);
@@ -119,12 +121,10 @@ BOOL    auto_lock = FALSE;
 field_ptr     field = NULL;
 counter_ptr   flag_counter = NULL;
 counter_ptr   time_counter = NULL;
+timer_ptr     timer_obj;
 
 BOOL   playing = TRUE;
 BOOL   time_on = FALSE;
-
-char    high_name[3][31];
-UWORD   high_score[3];
 
 
 void
@@ -148,9 +148,9 @@ main (
    if (initialize ())
    {
       srand48 (time (NULL));
-      load_high_score ();
+      load_high_scores (AUTHOR);
       event_loop ();
-      save_high_score ();
+      save_high_scores ();
    }
    
    finalize ();
@@ -160,7 +160,7 @@ main (
 void
 event_loop (void)
 {
-   LONG    new_time, old_time;
+   ULONG   winsig, timersig, sigmask;
    WORD    row, col, old_row = -1, old_col = -1;
    UBYTE   mouse_stat = 0;
    BOOL    ignore_click = TRUE;
@@ -179,148 +179,158 @@ event_loop (void)
    else
       main_win->Flags &= ~WFLG_RMBTRAP;
    
+   winsig = 1L << main_win->UserPort->mp_SigBit;
+   timersig = timer_signal (timer_obj);
    while (!quit)
    {
-      WaitPort (main_win->UserPort);
-      while (msg = (struct IntuiMessage *)GetMsg (main_win->UserPort))
+      sigmask = Wait (winsig | timersig);
+      if (sigmask & winsig)
       {
-         class = msg->Class;
-         code = msg->Code;
-         row = (msg->MouseY >= field_top (field)) ?
-               (msg->MouseY - field_top (field)) / cell_h : -1;
-         col = (msg->MouseX >= field_left (field)) ?
-               (msg->MouseX - field_left (field)) / cell_w : -1;
-         ReplyMsg ((struct Message *)msg);
-         switch (class)
+         while (msg = (struct IntuiMessage *)GetMsg (main_win->UserPort))
          {
-         case IDCMP_MOUSEBUTTONS:
-            if (ignore_click)
-               ignore_click = FALSE;
-            else if (playing)
+            class = msg->Class;
+            code = msg->Code;
+            row = (msg->MouseY >= field_top (field)) ?
+                  (msg->MouseY - field_top (field)) / cell_h : -1;
+            col = (msg->MouseX >= field_left (field)) ?
+                  (msg->MouseX - field_left (field)) / cell_w : -1;
+            ReplyMsg ((struct Message *)msg);
+            switch (class)
             {
-               switch (code)
+            case IDCMP_MOUSEBUTTONS:
+               if (ignore_click)
+                  ignore_click = FALSE;
+               else if (playing)
                {
-               case SELECTDOWN:
-                  if (field_inside (field, row, col))
+                  switch (code)
                   {
-                     mouse_stat |= LEFTDOWN;
-                     if (mouse_stat & RIGHTDOWN)
+                  case SELECTDOWN:
+                     if (field_inside (field, row, col))
+                     {
+                        mouse_stat |= LEFTDOWN;
+                        if (mouse_stat & RIGHTDOWN)
+                           press_around (field, row, col);
+                        else
+                           press_this (field, row, col);
+                     }
+                     break;
+                  case MENUDOWN:
+                     mouse_stat |= RIGHTDOWN;
+                     if (mouse_stat & LEFTDOWN)
+                     {
+                        release_this (field, row, col);
                         press_around (field, row, col);
-                     else
-                        press_this (field, row, col);
-                  }
-                  break;
-               case MENUDOWN:
-                  mouse_stat |= RIGHTDOWN;
-                  if (mouse_stat & LEFTDOWN)
-                  {
-                     release_this (field, row, col);
-                     press_around (field, row, col);
-                  }
-                  break;
-               case SELECTUP:
-                  if (mouse_stat & LEFTDOWN)
-                  {
-                     if (!time_on)
-                     {
-                        time_on = TRUE;
-                        old_time = new_time = time (NULL);
                      }
-                     if (mouse_stat & RIGHTDOWN)
-                        playing = sweep_this (field, row, col);
-                     else
-                        playing = reveal_this (field, row, col);
-                     
-                     mouse_stat = 0;
-                     if (!playing)
-                        game_over ();
-                     else if (field_swept (field))
-                     {
-                        win_game ();
-                        playing = FALSE;
-                     }
-                     time_on = playing;
-                  }
-                  break;
-               case MENUUP:
-                  if (mouse_stat & RIGHTDOWN)
-                  {
+                     break;
+                  case SELECTUP:
                      if (mouse_stat & LEFTDOWN)
                      {
                         if (!time_on)
                         {
                            time_on = TRUE;
-                           old_time = new_time = time (NULL);
+                           timer_start (timer_obj, 0L, 1000000L);
                         }
-                        time_on = playing = sweep_this (field, row, col);
+                        if (mouse_stat & RIGHTDOWN)
+                           playing = sweep_this (field, row, col);
+                        else
+                           playing = reveal_this (field, row, col);
+                        
+                        mouse_stat = 0;
+                        if (!playing)
+                           game_over ();
+                        else if (field_swept (field))
+                        {
+                           win_game ();
+                           playing = FALSE;
+                        }
+                        time_on = playing;
+                        if (!time_on)
+                           timer_stop (timer_obj);
                      }
-                     else
-                        toggle_lock (field, row, col);
-                     
-                     mouse_stat = 0;
-                     if (!playing)
-                        game_over ();
-                     else if (field_swept (field))
-                     {
-                        win_game ();
-                        time_on = playing = FALSE;
-                     }
-                  }
-                  break;
-               }
-            }
-            break;
-         case IDCMP_MENUPICK:
-            quit = process_menus (code);
-            break;
-         case IDCMP_MOUSEMOVE:
-            ignore_click = FALSE;
-            if (mouse_stat != 0)
-            {
-               if (old_row != row || old_col != col)
-               {
-                  if (mouse_stat & LEFTDOWN)
-                  {
+                     break;
+                  case MENUUP:
                      if (mouse_stat & RIGHTDOWN)
                      {
-                        release_around (field, old_row, old_col);
-                        press_around (field, row, col);
+                        if (mouse_stat & LEFTDOWN)
+                        {
+                           if (!time_on)
+                           {
+                              time_on = TRUE;
+                              timer_start (timer_obj, 0L, 1000000L);
+                           }
+                           time_on = playing = sweep_this (field, row, col);
+                           if (!time_on)
+                              timer_stop (timer_obj);
+                        }
+                        else
+                           toggle_lock (field, row, col);
+                        
+                        mouse_stat = 0;
+                        if (!playing)
+                           game_over ();
+                        else if (field_swept (field))
+                        {
+                           win_game ();
+                           time_on = playing = FALSE;
+                           timer_stop (timer_obj);
+                        }
                      }
-                     else
+                     break;
+                  }
+               }
+               break;
+            case IDCMP_MENUPICK:
+               quit = process_menus (code);
+               break;
+            case IDCMP_MOUSEMOVE:
+               ignore_click = FALSE;
+               if (mouse_stat != 0)
+               {
+                  if (old_row != row || old_col != col)
+                  {
+                     if (mouse_stat & LEFTDOWN)
                      {
-                        release_this (field, old_row, old_col);
-                        press_this (field, row, col);
+                        if (mouse_stat & RIGHTDOWN)
+                        {
+                           release_around (field, old_row, old_col);
+                           press_around (field, row, col);
+                        }
+                        else
+                        {
+                           release_this (field, old_row, old_col);
+                           press_this (field, row, col);
+                        }
                      }
                   }
                }
-            }
-            else
-            {
-               if (field_inside (field, row, col) && playing)
-                  main_win->Flags |= WFLG_RMBTRAP;
                else
-                  main_win->Flags &= ~WFLG_RMBTRAP;
+               {
+                  if (field_inside (field, row, col) && playing)
+                     main_win->Flags |= WFLG_RMBTRAP;
+                  else
+                     main_win->Flags &= ~WFLG_RMBTRAP;
+               }
+               break;
+            case IDCMP_ACTIVEWINDOW:
+               ignore_click = !ignore_click;
+               break;
+            case IDCMP_CLOSEWINDOW:
+               quit = TRUE;
+               break;
             }
-            break;
-         case IDCMP_ACTIVEWINDOW:
-            ignore_click = !ignore_click;
-            break;
-         case IDCMP_CLOSEWINDOW:
-            quit = TRUE;
-            break;
-         case IDCMP_INTUITICKS:
-            if (time_on)
-            {
-               new_time = time (NULL);
-               counter_update (time_counter,
-                               counter_value (time_counter) +
-                               new_time - old_time);
-               old_time = new_time;
-            }
-            break;
+            old_row = row;
+            old_col = col;
          }
-         old_row = row;
-         old_col = col;
+      }
+      if (sigmask & timersig)
+      {
+         if (time_on)
+         {
+            timer_continue (timer_obj, 0L, 1000000L);
+            counter_update (time_counter, counter_value (time_counter) + 1);
+         }
+         else
+            timer_stop (timer_obj);
       }
       row = (main_win->MouseY >= field_top (field)) ?
             (main_win->MouseY - field_top (field)) / cell_h : -1;
@@ -369,25 +379,16 @@ process_menus (
                new_game (EXPERT_LEVEL);
                break;
             case ITEM_High:
-               sprintf (buf_2, "%s: %-30s %3d\n\n%s: %-30s %3d\n\n%s: %-30s %3d",
-                        GetString (&li, MSG_GAME_NOVICE) + 2,
-                        high_name[0], high_score[0],
-                        GetString (&li, MSG_GAME_AMATURE) + 2,
-                        high_name[1], high_score[1],
-                        GetString (&li, MSG_GAME_EXPERT) + 2,
-                        high_name[2], high_score[2]);
-               msg_requester (main_win,
-                              GetString (&li, MSG_HIGHSCORE_REQTITLE),
-                              GetString (&li, MSG_CONTINUE_GAD),
-                              buf_2);
+               display_high_scores (current_level);
                break;
             case ITEM_About:
-               sprintf (buf_1, GetString (&li, MSG_ABOUT_REQTITLE), PRG_NAME);
-               sprintf (buf_2, GetString (&li, MSG_ABOUT_REQMSG),
+               sprintf (buf_1,
+                        localized_string (MSG_ABOUT_REQTITLE), PRG_NAME);
+               sprintf (buf_2, localized_string (MSG_ABOUT_REQMSG),
                         PRG_NAME, VERSION_NO, AUTHOR, MAIL_ADDRESS,
                         CREATION_YEAR, AUTHOR);
                msg_requester (main_win, buf_1,
-                              GetString (&li, MSG_CONTINUE_GAD), buf_2);
+                              localized_string (MSG_CONTINUE_GAD), buf_2);
                break;
             case ITEM_Quit:
                quit = TRUE;
@@ -423,13 +424,8 @@ void
 win_game (void)
 {
    field_win (field);
-   if (counter_value (time_counter) <= high_score[current_level])
-   {
-      string_requester (main_win, vis_info, GetString (&li, MSG_NAME_REQTITLE),
-                        GetString (&li, MSG_NAME_GAD),
-                        high_name[current_level], 30);
-      high_score[current_level] = counter_value (time_counter);
-   }
+   if (update_high_score (current_level, counter_value (time_counter)))
+      display_high_scores (current_level);
 }
 
 void
@@ -468,8 +464,12 @@ new_game (
       ModifyIDCMP (main_win, IDCMP_CHANGEWINDOW);
       window_extent (pub_screen, level, main_win->RPort->TxWidth,
                      main_win->RPort->TxHeight, &win_w, &win_h);
-      ChangeWindowBox (main_win, (pub_screen->Width - win_w) / 2,
-                       (pub_screen->Height - win_h) / 2, win_w, win_h);
+      ChangeWindowBox (main_win,
+                       (win_w > pub_screen->Width - main_win->LeftEdge) ?
+                       pub_screen->Width - win_w : main_win->LeftEdge,
+                       (win_h > pub_screen->Height - main_win->TopEdge) ?
+                       pub_screen->Height - win_h : main_win->TopEdge,
+                       win_w, win_h);
       while (!done)
       {
          WaitPort (main_win->UserPort);
@@ -507,86 +507,7 @@ new_game (
    counter_update (time_counter, 0);
    playing = TRUE;
    time_on = FALSE;
-}
-
-void
-load_high_score (void)
-{
-   register UWORD   i = 0, j = 0;
-   FILE  *score_file;
-   int    ch;
-   char   num_str[4];
-   BOOL   name = TRUE;
-   
-   if (score_file = fopen ("lazymines.hiscore", "r"))
-   {
-      while ((ch = fgetc (score_file)) != EOF && j < 3)
-      {
-         if (name)
-         {
-            if (ch == '\n')
-            {
-               high_name[j][i] = '\0';
-               name = FALSE;
-               i = 0;
-            }
-            else
-            {
-               high_name[j][i] = ch;
-               ++i;
-            }
-         }
-         else
-         {
-            if (ch == '\n')
-            {
-               num_str[i] = '\0';
-               high_score[j] = atoi (num_str);
-               name = TRUE;
-               i = 0;
-               ++j;
-            }
-            else
-            {
-               num_str[i] = ch;
-               ++i;
-            }
-         }
-      }
-      fclose (score_file);
-   }
-   
-   for (i = j; i < 3; ++i)
-   {
-      if (name)
-      {
-         strncpy (high_name[i], AUTHOR, 30);
-         high_score[i] = 999;
-      }
-      else
-      {
-         high_score[i] = 0;
-         name = TRUE;
-      }
-   }
-}
-
-void
-save_high_score (void)
-{
-   register UBYTE   i;
-   FILE  *score_file;
-   
-   if (score_file = fopen ("lazymines.hiscore", "w"))
-   {
-      for (i = 0; i < 3; ++i)
-      {
-         fputs (high_name[i], score_file);
-         fputc ('\n', score_file);
-         fprintf (score_file, "%d\n", high_score[i]);
-      }
-      fclose (score_file);
-   }
+   timer_stop (timer_obj);
 }
 
 BOOL
@@ -672,10 +593,11 @@ init_display (void)
                            WA_Title, (digital_display) ?
                                      PRG_NAME : "    :    ",
                            WA_ScreenTitle, scr_title,
+                           WA_PubScreen, pub_screen,
                            WA_NewLookMenus, TRUE,
                            WA_ReportMouse, TRUE,
                            WA_IDCMP, IDCMP_MOUSEBUTTONS | IDCMP_MENUPICK |
-                                     IDCMP_MOUSEMOVE | IDCMP_INTUITICKS |
+                                     IDCMP_MOUSEMOVE |
                                      IDCMP_ACTIVEWINDOW | IDCMP_CLOSEWINDOW,
                            TAG_DONE);
                if (main_win)
@@ -740,7 +662,7 @@ init_display (void)
                                                  levels[current_level].bombs))
                         {
                            field_clear (field);
-                           return TRUE;
+                           return (BOOL)(timer_obj = timer_create ());
                         }
                      }
                      else
@@ -831,6 +753,8 @@ finalize (void)
 void
 finalize_display (void)
 {
+   if (timer_obj)
+      timer_destroy (timer_obj);
    if (field)
       field_free (field);
    if (flag_counter)
