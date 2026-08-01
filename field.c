@@ -1,361 +1,643 @@
 /*
  * field.c
  * =======
- * Implementerar minfältet.
- *
- * Copyright (C) 1994 Lorens Younes (d93-hyo@nada.kth.se)
+ * Implements the minefield.
  */
 
 #include <exec/types.h>
-#include <clib/exec_protos.h>
+#include <exec/memory.h>
+#include <graphics/rastport.h>
+#include <libraries/gadtools.h>
 #include <math.h>
-#include "globals.h"
+#include <string.h>
+#include "counter.h"
+#include "layout.h"
+#include "images.h"
+#include "game.h"
 #include "field.h"
 
-void NewGame(void);
-void WinTheGame(void);
-void GameOver(void);
-void InitField(void);
-BOOL IsInside(short row, short col);
-short Cellvalue(short row, short col);
-BOOL RevealThis(short row, short col);
-BOOL RevealAround(short row, short col);
-void ToggleLock(short row, short col);
-BOOL SweepThis(short row, short col);
-void RemoveWarnings(short row, short col);
-void PressThis(short row, short col);
-void PressAround(short row, short col);
-void ReleaseThis(short row, short col);
-void ReleaseAround(short row, short col);
-
-void ClearField(void);
-void DrawCell(short row, short col);
-void DrawBox(short row, short col, BOOL recessed);
-void draw_flagcounter (ULONG);
-
-extern short num_rows, num_columns, num_mines;
-extern short revealed;
-extern short flagsLeft;
-extern BOOL playing;
-extern BOOL openSafe, warnings;
-extern BOOL autoLock, autoOpen;
+#include <clib/exec_protos.h>
+#include <clib/gadtools_protos.h>
+#include <clib/graphics_protos.h>
 
 
-/* Variabler som definierar minfältet. */
-UBYTE  *field = NULL;   /* minfältet */
+struct field {
+   struct RastPort  *rp;
+   WORD              left;
+   WORD              top;
+   UBYTE             rows;
+   UBYTE             columns;
+   UWORD             bombs;
+   UBYTE            *data;
+   UWORD             num_swept;
+};
 
 
-BOOL
-define_field (
-   WORD    rows,
-   WORD    columns,
-   ULONG   mines)
+#define BOMB     0x10
+#define LOCKED   0x20
+#define WARNED   0x40
+#define SWEPT    0x80
+
+#define FIELD(f, r, c) ((f)->data[(r) * (f)->columns + (c)])
+
+#define SET_FIELD(f, r, c, v) (FIELD ((f), (r), (c)) = (v))
+
+#define CELL_VAL(f, r, c) (FIELD ((f), (r), (c)) & 0x0F)
+
+#define IS_BOMB(f, r, c) (FIELD ((f), (r), (c)) & BOMB)
+
+#define IS_LOCKED(f, r, c) (FIELD ((f), (r), (c)) & LOCKED)
+
+#define IS_WARNED(f, r, c) (FIELD ((f), (r), (c)) & WARNED)
+
+#define IS_SWEPT(f, r, c) (FIELD ((f), (r), (c)) & SWEPT)
+
+#define PLACE_BOMB(f, r, c) (FIELD ((f), (r), (c)) |= BOMB)
+
+#define LOCK_CELL(f, r, c) (FIELD ((f), (r), (c)) |= LOCKED)
+
+#define WARN_CELL(f, r, c) (FIELD ((f), (r), (c)) |= WARNED)
+
+#define UNLOCK_CELL(f, r, c) (FIELD ((f), (r), (c)) &= ~(LOCKED | WARNED))
+
+#define SWEEP_CELL(f, r, c) (FIELD ((f), (r), (c)) |= SWEPT)
+
+#define FIELDWIDTH(f) ((f)->columns * cell_w + 2 * LINEWIDTH)
+#define FIELDHEIGHT(f) ((f)->rows * cell_h + 2 * LINEHEIGHT)
+
+
+extern APTR   vis_info;
+
+
+static UBYTE
+count_neighbors (
+   field_ptr   field,
+   WORD        row,
+   WORD        col,
+   UBYTE       filter)
 {
-   num_mines = mines;
-   if (field != NULL && rows == num_rows && columns == num_columns)
-      return TRUE;
+   register WORD    r, c;
+   register UBYTE   count = 0;
    
-   num_rows = rows;
-   num_columns = columns;
-   free_field ();
-   field = AllocVec (num_rows * num_columns * sizeof (*field), 0L);
+   for (r = row - 1; r <= row + 1; ++r)
+   {
+      for (c = col - 1; c <= col + 1; ++c)
+      {
+         if (field_inside (field, r, c) && !(r == row && c == col) &&
+             FIELD (field, r, c) & filter)
+         {
+            ++count;
+         }
+      }
+   }
    
-   return (BOOL)(field != NULL);
+   return count;
 }
 
+static BOOL
+reveal_around (
+   field_ptr   field,
+   WORD        row,
+   WORD        col)
+{
+   register WORD   r, c;
+   register BOOL   success = TRUE;
+   
+   for (r = row - 1; r <= row + 1 && success; ++r)
+      for (c = col - 1; c <= col + 1 && success; ++c)
+         if (!(r == row && c == col))
+            success = reveal_this (field, r, c);
+   
+   return success;
+}
+
+static void
+draw_box(
+   struct RastPort  *rp,
+   WORD              left,
+   WORD              top,
+   BOOL              recessed)
+{
+   if (recessed)
+   {
+      SetAPen (rp, gui_pens[SHADOWPEN]);
+      Move (rp, left, top);
+      Draw (rp, left + cell_w - 1, top);
+      Draw (rp, left + cell_w - 1, top + cell_h - 1);
+      Draw (rp, left, top + cell_h - 1);
+      Draw (rp, left, top);
+      SetAPen (rp, gui_pens[BACKGROUNDPEN]);
+      Move (rp, left + 1, top + 1);
+      Draw (rp, left + 1, top + cell_h - 2);
+      Move (rp, left + cell_w - 2, top + 1);
+      Draw (rp, left + cell_w - 2, top + cell_h - 2);
+   }
+   else
+   {
+      SetAPen(rp, gui_pens[SHINEPEN]);
+      Move (rp, left + cell_w - 2, top);
+      Draw (rp, left, top);
+      Draw (rp, left, top + cell_h - 1);
+      Move (rp, left + 1, top + cell_h - 2);
+      Draw (rp, left + 1, top + 1);
+      SetAPen(rp, gui_pens[SHADOWPEN]);
+      Move (rp, left + 1, top + cell_h - 1);
+      Draw (rp, left + cell_w - 1, top + cell_h - 1);
+      Draw (rp, left + cell_w - 1, top);
+      Move (rp, left + cell_w - 2, top + 1);
+      Draw (rp, left + cell_w - 2, top + cell_h - 2);
+   }
+}
+
+static void
+draw_cell (
+   struct RastPort  *rp,
+   WORD              left,
+   WORD              top,
+   UBYTE             value)
+{
+   draw_box (rp, left, top, value & SWEPT);
+   SetAPen (rp, gui_pens[BACKGROUNDPEN]);
+   RectFill (rp, left + LINEWIDTH, top + LINEHEIGHT,
+             left + cell_w - LINEWIDTH - 1, top + cell_h - LINEHEIGHT - 1);
+   if (value & SWEPT)
+   {
+      if (value & BOMB)
+      {
+         draw_image (rp, left + (cell_w - BOMBIMAGE_WIDTH) / 2,
+                     top + (cell_h - BOMBIMAGE_HEIGHT) / 2,
+                     BOMBIMAGE_WIDTH, BOMBIMAGE_HEIGHT, bombimage);
+      }
+      else
+      {
+         value &= 0x0F;
+         if (value > 0)
+         {
+            char   ch = value + '0';
+            
+            SetAPen (rp, (game_pens[value - 1] != -1) ?
+                     game_pens[value - 1] : gui_pens[TEXTPEN]);
+            Move (rp, left + (cell_w - rp->TxWidth) / 2,
+                  top + (cell_h - rp->TxHeight) / 2 + rp->TxBaseline);
+            Text (rp, &ch, 1);
+         }
+      }
+   }
+   else if (value & LOCKED)
+   {
+      if (value & WARNED)
+      {
+         SetAPen (rp, gui_pens[TEXTPEN]);
+         Move (rp, left + (cell_w - rp->TxWidth) / 2,
+               top + (cell_h - rp->TxHeight) / 2 + rp->TxBaseline);
+         Text (rp, "?", 1);
+      }
+      else
+      {
+         draw_image (rp, left + (cell_w - FLAGIMAGE_WIDTH) / 2,
+                     top + (cell_h - FLAGIMAGE_HEIGHT) / 2,
+                     FLAGIMAGE_WIDTH, FLAGIMAGE_WIDTH, flagimage);
+      }
+   }
+}
+
+static void
+mutate_neighbors (
+   field_ptr   field,
+   WORD        row,
+   WORD        col,
+   UBYTE       filter,
+   UBYTE       mask)
+{
+   register WORD   r, c;
+   
+   for (r = row - 1; r <= row + 1; ++r)
+   {
+      for (c = col - 1; c <= col + 1; ++c)
+      {
+         if (field_inside (field, r, c) && !(r == row && r == col) &&
+             FIELD (field, r, c) & filter)
+         {
+            FIELD (field, r, c) &= ~mask;
+            draw_cell (field->rp, field->left + LINEWIDTH + c * cell_w,
+                       field->top + LINEHEIGHT + r * cell_h,
+                       FIELD (field, r, c));
+         }
+      }
+   }
+}
+
+field_ptr
+field_init (
+   struct RastPort  *rp,
+   WORD              left,
+   WORD              top,
+   UBYTE             rows,
+   UBYTE             columns,
+   UWORD             bombs)
+{
+   field_ptr   field;
+   
+   if (field = AllocVec (sizeof (*field), MEMF_PUBLIC))
+   {
+      field->rp = rp;
+      field->left = left;
+      field->top = top;
+      field->rows = rows;
+      field->columns = columns;
+      field->bombs = bombs;
+      if (!(field->data = AllocVec (field->rows * field->columns *
+                                    sizeof (*field->data), MEMF_PUBLIC)))
+      {
+         field_free (field);
+      }
+   }
+   
+   return field;
+}
 
 void
-free_field (void)
+field_free (
+   field_ptr   field)
 {
    if (field != NULL)
+   {
+      if (field->data != NULL)
+         FreeVec (field->data);
+      
       FreeVec (field);
-}
-
-
-void
-NewGame(void)
-{
-   register short   r, c;
-   register BOOL    success = FALSE;
-   revealed = 0;
-   flagsLeft = num_mines;
-   draw_flagcounter (flagsLeft);
-   InitField();
-   ClearField();
-   playing = TRUE;
-
-   if (autoOpen)
-   {
-      for (r = 0; r < num_rows && !success; ++r)
-         for (c = 0; c < num_columns && !success; ++c)
-         if (success = (Cellvalue (r, c) == 0))
-            RevealThis (r, c);
    }
 }
 
-void
-WinTheGame(void)
+WORD
+field_left (
+   field_ptr   field)
 {
-   register short r, c;
-   
-   for (r = 0; r < num_rows; r++)
-      for (c = 0; c < num_columns; c++)
-         if (Cellvalue(r, c) == MINE)
-         {
-            field[r * num_columns + c] |= LOCKED;
-            DrawCell(r, c);
-         }
-   draw_flagcounter (0);
+   return field->left;
 }
 
-void
-GameOver(void)
+WORD
+field_top (
+   field_ptr   field)
 {
-   register short r, c;
-   
-   for (r = 0; r < num_rows; r++)
-      for (c = 0; c < num_columns; c++)
-         if (Cellvalue(r, c) == MINE)
-         {
-            field[r * num_columns + c] |= REVEALED;
-            DrawCell(r, c);
-         }
-}
-
-void
-InitField(void)
-{
-   register short r, c, j, i = 0;
-   
-   for (r = 0; r < num_rows; r++)
-      for (c = 0; c < num_columns; c++)
-         field[r * num_columns + c] = 0;
-   while (i < num_mines)
-   {
-      r = drand48() * num_rows;
-      c = drand48() * num_columns;
-      if (field[r * num_columns + c] == 0)
-      {
-         i++;
-         field[r * num_columns + c] = MINE;
-      }
-   }
-   for (r = 0; r < num_rows; r++)
-      for (c = 0; c < num_columns; c++)
-         for (i = r - 1; i <= r + 1; i++)
-            for (j = c - 1; j <= c + 1; j++)
-               if (IsInside(i, j) &&
-                   field[r * num_columns + c] != MINE &&
-                   field[i * num_columns + j] == MINE)
-               {
-                  field[r * num_columns + c]++;
-               }
+   return field->top;
 }
 
 BOOL
-IsInside(
-   short row,
-   short col)
+field_swept (
+   field_ptr   field)
 {
-   return (BOOL)(row >= 0 && col >= 0 && row < num_rows && col < num_columns);
+   return (BOOL)(field->rows * field->columns - field->bombs ==
+                 field->num_swept);
 }
 
-short
-Cellvalue(
-   short row,
-   short col)
+void
+field_win (
+   field_ptr   field)
 {
-   return (short)(field[row * num_columns + col] & 0x0F);
+   register UBYTE   r, c;
+   
+   for (r = 0; r < field->rows; ++r)
+   {
+      for (c = 0; c < field->columns; ++c)
+      {
+         if (IS_BOMB (field, r, c) && !IS_LOCKED (field, r, c))
+         {
+            LOCK_CELL (field, r, c);
+            draw_cell (field->rp, field->left + LINEWIDTH + c * cell_w,
+                       field->top + LINEHEIGHT + r * cell_h,
+                       FIELD (field, r, c));
+         }
+      }
+   }
+   counter_update (flag_counter, 0);
+}
+
+void
+field_lose (
+   field_ptr   field)
+{
+   register UBYTE   r, c;
+   
+   for (r = 0; r < field->rows; ++r)
+   {
+      for (c = 0; c < field->columns; ++c)
+      {
+         if (IS_BOMB (field, r, c))
+         {
+            SWEEP_CELL (field, r, c);
+            draw_cell (field->rp, field->left + LINEWIDTH + c * cell_w,
+                       field->top + LINEHEIGHT + r * cell_h,
+                       FIELD (field, r, c));
+         }
+      }
+   }
+}
+
+void
+field_move (
+   field_ptr   field,
+   WORD        left,
+   WORD        top)
+{
+   field->left = left;
+   field->top = top;
 }
 
 BOOL
-RevealThis(
-   short row,
-   short col)
+field_size (
+   field_ptr   field,
+   UBYTE       rows,
+   UBYTE       columns,
+   UWORD       bombs)
 {
-   register short value;
-   
-   if (IsInside(row, col) &&
-       !(field[row * num_columns + col] & (REVEALED | LOCKED)))
+   if (rows != field->rows || columns != field->columns && field->data != NULL)
    {
-      value = Cellvalue(row, col);
-      if (value == MINE && revealed == 0 && openSafe)
+      FreeVec (field->data);
+      if (!(field->data = AllocVec (rows * columns *
+                                    sizeof (*field->data), MEMF_PUBLIC)))
       {
-         ReleaseThis(row, col);
-         return TRUE;
+         return FALSE;
       }
-      field[row * num_columns + col] |= REVEALED;
-      revealed++;
-      DrawCell(row, col);
-      if (value == 0)
-         RevealAround(row, col);
-      return (BOOL)(value != MINE);
    }
+   field->rows = rows;
+   field->columns = columns;
+   field->bombs = bombs;
+}
+
+BOOL
+field_inside (
+   field_ptr   field,
+   WORD        r,
+   WORD        c)
+{
+   return (BOOL)(r >= 0 && r < field->rows && c >= 0 && c < field->columns);
+}
+
+void
+field_reset (
+   field_ptr   field)
+{
+   register UBYTE   r, c;
+   register ULONG   n = field->bombs;
+   
+   field->num_swept = 0;
+   
+   memset (field->data, 0,
+           field->rows * field->columns * sizeof (*(field->data)));
+   
+   while (n > 0)
+   {
+      r = drand48 () * field->rows;
+      c = drand48 () * field->columns;
+      if (!IS_BOMB (field, r, c))
+      {
+         PLACE_BOMB (field, r, c);
+         --n;
+      }
+   }
+   
+   for (r = 0; r < field->rows; ++r)
+      for (c = 0; c < field->columns; ++c)
+         if (!IS_BOMB (field, r, c))
+            SET_FIELD (field, r, c, count_neighbors (field, r, c, BOMB));
+}
+
+void
+field_clear (
+   field_ptr   field)
+{
+   register UBYTE   r, c;
+   
+   DrawBevelBox (field->rp, field->left, field->top,
+                 FIELDWIDTH (field), FIELDHEIGHT (field),
+                 GT_VisualInfo, vis_info,
+                 GTBB_Recessed, TRUE,
+                 TAG_DONE);
+   
+   SetAPen (field->rp, gui_pens[BACKGROUNDPEN]);
+   RectFill (field->rp, field->left + LINEWIDTH, field->top + LINEHEIGHT,
+             field->left + LINEWIDTH + cell_w - 1,
+             field->top + LINEHEIGHT + cell_h - 1);
+   draw_box (field->rp, field->left + LINEWIDTH, field->top + LINEHEIGHT, FALSE);
+   
+   for (r = 0; r < field->rows; ++r)
+   {
+      for (c = 0; c < field->columns; ++c)
+      {
+         if (r || c)
+         {
+            ClipBlit (field->rp, field->left + LINEWIDTH,
+                      field->top + LINEHEIGHT,
+                      field->rp, field->left + LINEWIDTH + c * cell_w,
+                      field->top + LINEHEIGHT + r * cell_h,
+                      cell_w, cell_h, 0x00C0);
+         }
+      }
+   }
+}
+
+void
+field_delete (
+   field_ptr   field)
+{
+   SetAPen (field->rp, gui_pens[BACKGROUNDPEN]);
+   RectFill (field->rp, field->left, field->top,
+             field->left + FIELDWIDTH (field) - 1,
+             field->top + FIELDHEIGHT (field) - 1);
+}
+
+BOOL
+reveal_this (
+   field_ptr   field,
+   WORD        row,
+   WORD        col)
+{
+   if (field_inside (field, row, col) &&
+       !IS_SWEPT (field, row, col) && !IS_LOCKED (field, row, col))
+   {
+      if (IS_BOMB (field, row, col))
+      {
+         if (field->num_swept == 0 && safe_opening)
+         {
+            release_this (field, row, col);
+            return TRUE;
+         }
+         else
+         {
+            SWEEP_CELL (field, row, col);
+            draw_cell (field->rp, field->left + LINEWIDTH + col * cell_w,
+                       field->top + LINEHEIGHT + row * cell_h,
+                       FIELD (field, row, col));
+            
+            return FALSE;
+         }
+      }
+      SWEEP_CELL (field, row, col);
+      ++field->num_swept;
+      draw_cell (field->rp, field->left + LINEWIDTH + col * cell_w,
+                 field->top + LINEHEIGHT + row * cell_h,
+                 FIELD (field, row, col));
+      if (CELL_VAL (field, row, col) == 0)
+         reveal_around (field, row, col);
+   }
+   
    return TRUE;
 }
 
 BOOL
-RevealAround(
-   short row,
-   short col)
+sweep_this (
+   field_ptr   field,
+   WORD        row,
+   WORD        col)
 {
-   register short i, j;
-   register BOOL success = TRUE;
+   register WORD    r, c;
+   register UBYTE   lock_count = 0;
+   register UBYTE   warn_count = 0;
+   register UBYTE   free_count = 0;
+   register BOOL    success = TRUE;
    
-   for (i = -1; i <= 1 && success; i++)
-      for (j = -1; j <= 1 && success; j++)
-         if (i || j)
-            success = RevealThis(row + i, col + j);
+   if (field_inside (field, row, col) && IS_SWEPT (field, row, col))
+   {
+      for (r = row - 1; r <= row + 1; ++r)
+      {
+         for (c = col - 1; c <= col + 1; ++c)
+         {
+            if (field_inside (field, r, c) && !(r == row && c == col))
+            {
+               if (IS_WARNED (field, r, c))
+                  ++warn_count;
+               else if (IS_LOCKED (field, r, c))
+                  ++lock_count;
+               else if (!IS_SWEPT (field, r, c))
+                  ++free_count;
+            }
+         }
+      }
+      
+      if (lock_count >= CELL_VAL (field, row, col))
+      {
+         if (warn_count)
+            mutate_neighbors (field, row, col, WARNED, WARNED | LOCKED);
+         success = reveal_around (field, row, col);
+      }
+      else if (free_count + warn_count + lock_count ==
+               CELL_VAL (field, row, col))
+      {
+         if (auto_lock)
+         {
+            if (warn_count)
+               mutate_neighbors (field, row, col, WARNED, WARNED | LOCKED);
+            for (r = row - 1; r <= row + 1; ++r)
+            {
+               for (c = col - 1; c <= col + 1; ++c)
+               {
+                  if (field_inside (field, r, c) && !(r == row && c == col) &&
+                      !(IS_SWEPT (field, r, c) || IS_LOCKED (field, r, c)))
+                  {
+                     toggle_lock (field, r, c);
+                  }
+               }
+            }
+         }
+      }
+   }
+   release_around (field, row, col);
    
    return success;
 }
 
 void
-ToggleLock(
-   short row,
-   short col)
+toggle_lock (
+   field_ptr   field,
+   WORD        row,
+   WORD        col)
 {
-   if (IsInside(row, col) && !(field[row * num_columns + col] & REVEALED))
-      if (field[row * num_columns + col] & LOCKED)
+   if (field_inside (field, row, col) && !IS_SWEPT (field, row, col))
+   {
+      if (IS_LOCKED (field, row, col))
       {
-         if (field[row * num_columns + col] & WARNING)
-            field[row * num_columns + col] &= ~(WARNING | LOCKED);
+         if (IS_WARNED (field, row, col))
+            UNLOCK_CELL (field, row, col);
          else
          {
-            if (warnings)
-               field[row * num_columns + col] |= WARNING;
+            if (place_warnings)
+               WARN_CELL (field, row, col);
             else
-               field[row * num_columns + col] &= ~LOCKED;
-            flagsLeft++;
-            draw_flagcounter (flagsLeft);
+               UNLOCK_CELL (field, row, col);
+            counter_update (flag_counter, counter_value (flag_counter) + 1);
          }
-         DrawCell(row, col);
+         draw_cell (field->rp, field->left + LINEWIDTH + col * cell_w,
+                    field->top + LINEHEIGHT + row * cell_h,
+                    FIELD (field, row, col));
       }
-      else
-         if (flagsLeft > 0)
-         {
-            field[row * num_columns + col] |= LOCKED;
-            flagsLeft--;
-            draw_flagcounter (flagsLeft);
-            DrawCell(row, col);
-         }
-}
-
-BOOL
-SweepThis(
-   short row,
-   short col)
-{
-   register short i, j;
-   short lockCount = 0;
-   short warnCount = 0;
-   short freeCount = 0;
-   BOOL success = TRUE;
-   
-   if (IsInside(row, col) && field[row * num_columns + col] & REVEALED)
-   {
-      for (i = row - 1; i <= row + 1; i++)
-         for (j = col - 1; j <= col + 1; j++)
-            if (IsInside (i, j))
-            {
-               if (field[i * num_columns + j] & WARNING)
-                  warnCount++;
-               else if (field[i * num_columns + j] & LOCKED)
-                  lockCount++;
-               else if (!(field[i * num_columns + j] & REVEALED))
-                  freeCount++;
-            }
-      if (lockCount >= Cellvalue (row, col))
+      else if (counter_value (flag_counter) > 0)
       {
-         if (warnCount)
-            RemoveWarnings (row, col);
-         success = RevealAround (row, col);
+         LOCK_CELL (field, row, col);
+         draw_cell (field->rp, field->left + LINEWIDTH + col * cell_w,
+                    field->top + LINEHEIGHT + row * cell_h,
+                    FIELD (field, row, col));
+         counter_update (flag_counter, counter_value (flag_counter) - 1);
       }
-      else if (freeCount + warnCount + lockCount == Cellvalue (row, col))
-      {
-         if (autoLock)
-         {
-            if (warnCount)
-               RemoveWarnings (row, col);
-            for (i = row - 1; i <= row + 1; ++i)
-               for (j = col - 1; j <= col + 1; ++j)
-                  if (IsInside (i, j) &&
-                      !(field[i * num_columns + j] & (REVEALED | LOCKED)))
-                  {
-                     ToggleLock (i, j);
-                  }
-         }
-      }
-      ReleaseAround (row, col);
    }
-   
-   return success;
 }
 
 void
-RemoveWarnings(
-   short row,
-   short col)
+press_this (
+   field_ptr   field,
+   WORD        row,
+   WORD        col)
 {
-   register short i, j;
-   
-      for (i = row - 1; i <= row + 1; i++)
-         for (j = col - 1; j <= col + 1; j++)
-            if (IsInside(i, j) && field[i * num_columns + j] & WARNING)
-            {
-               field[i * num_columns + j] &= ~(WARNING | LOCKED);
-               DrawCell(i, j);
-            }
-}
-
-void
-PressThis(
-   short row,
-   short col)
-{
-   if (IsInside(row, col) &&
-       !(field[row * num_columns + col] & (REVEALED | LOCKED)))
+   if (field_inside (field, row, col) && 
+       !(IS_SWEPT (field, row, col) || IS_LOCKED (field, row, col)))
    {
-      DrawBox(row, col, TRUE);
+      draw_box (field->rp, field->left + LINEWIDTH + col * cell_w,
+                field->top + LINEHEIGHT + row * cell_h,
+                TRUE);
    }
 }
 
 void
-PressAround(
-   short row,
-   short col)
+press_around (
+   field_ptr   field,
+   WORD        row,
+   WORD        col)
 {
-   register short i, j;
+   register WORD   r, c;
    
-   if (IsInside(row, col) && field[row * num_columns + col] & REVEALED)
-      for (i = -1; i <= 1; i++)
-         for (j = -1; j <= 1; j++)
-            if (i || j)
-               PressThis(row + i, col + j);
+   if (field_inside (field, row, col) && IS_SWEPT (field, row, col))
+      for (r = row - 1; r <= row + 1; ++r)
+         for (c = col - 1; c <= col + 1; ++c)
+            if (!(r == row && c == col))
+               press_this (field, r, c);
 }
 
 void
-ReleaseThis(
-   short row,
-   short col)
+release_this (
+   field_ptr   field,
+   WORD        row,
+   WORD        col)
 {
-   if (IsInside(row, col) &&
-       !(field[row * num_columns + col] & (REVEALED | LOCKED)))
+   if (field_inside (field, row, col) &&
+       !(IS_SWEPT (field, row, col) || IS_LOCKED (field, row, col)))
    {
-      DrawBox(row, col, FALSE);
+      draw_box (field->rp, field->left + LINEWIDTH + col * cell_w,
+                field->top + LINEHEIGHT + row * cell_h,
+                FALSE);
    }
 }
 
 void
-ReleaseAround(
-   short row,
-   short col)
+release_around (
+   field_ptr   field,
+   WORD        row,
+   WORD        col)
 {
-   register short i, j;
+   register WORD   r, c;
    
-   if (IsInside(row, col) && field[row * num_columns + col] & REVEALED)
-      for (i = -1; i <= 1; i++)
-         for (j = -1; j <= 1; j++)
-            if (i || j)
-               ReleaseThis(row + i, col + j);
+   if (field_inside (field, row, col) && IS_SWEPT (field, row, col))
+      for (r = row - 1; r <= row + 1; ++r)
+         for (c = col - 1; c <= col + 1; ++c)
+            if (!(r == row && c == col))
+               release_this (field, r, c);
 }

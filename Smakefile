@@ -1,11 +1,38 @@
-CFLAGS = math=ffp
-OBJS = draw.o field.o Minesweeper.o
+.ct.catalog:
+   CatComp Catalogs/lazymines.cd $< CATALOG $@
 
+CFLAGS = math=ffp
+
+OBJS = lazymines.o strings.o localize.o requesters.o counter.o layout.o \
+       images.o field.o tooltypes.o
+
+
+all: LazyMines \
+     Catalogs/Svenska/lazymines.catalog
+     
 LazyMines: $(OBJS)
-   slink FROM LIB:c.o $(OBJS) TO LazyMines \
+   $(LD) FROM LIB:c.o $(OBJS) \
+         TO LazyMines \
          LIB LIB:scmffp.lib LIB:sc.lib LIB:amiga.lib
 
 
-Minesweeper.o: Minesweeper.c field.h
-draw.o:        draw.c globals.h images.h
-field.o:       field.c field.h globals.h
+Catalogs/Svenska/lazymines.catalog: Catalogs/svenska.ct
+
+lazymines.o:  lazymines.c counter.h layout.h images.h game.h requesters.h \
+              localize.h field.h tooltypes.h
+field.o:      field.c field.h layout.h
+counter.o:    counter.c counter.h layout.h images.h
+layout.o:     layout.c layout.h images.h game.h
+images.o:     images.c images.h layout.h
+tooltypes.o:  tooltypes.c tooltypes.h
+requesters.o: requesters.c requesters.h
+localize.o:   localize.c localize.h
+
+localize.h: strings.o
+   copy localize.h temp >NIL:
+   delete localize.h >NIL:
+   copy temp localize.h >NIL:
+   delete temp >NIL:
+
+strings.o: Catalogs/lazymines.cd
+   CatComp $< CFILE strings.h OBJFILE $@

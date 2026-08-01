@@ -1,0 +1,57 @@
+;
+MSG_GAME_MENU (//)
+ \0Game
+;
+MSG_GAME_NEW (//)
+N\0New
+;
+MSG_GAME_NOVICE (//)
+1\0Novice
+;
+MSG_GAME_AMATURE (//)
+2\0Amature
+;
+MSG_GAME_EXPERT (//)
+3\0Expert
+;
+MSG_GAME_HIGHSCORE (//)
+ \0Fastest Sweepers...
+;
+MSG_GAME_ABOUT (//)
+?\0About...
+;
+MSG_GAME_QUIT (//)
+Q\0Quit LazyMines
+;
+MSG_SETTINGS_MENU (//)
+ \0Settings
+;
+MSG_SETTINGS_WARNINGS (//)
+ \0Warnings
+;
+MSG_SETTINGS_AUTOLOCK (//)
+ \0Auto Mark
+;
+MSG_SETTINGS_SAFEOPEN (//)
+ \0Safe Openings
+;
+MSG_SETTINGS_SAVE (//)
+ \0Save Settings
+;
+MSG_CONTINUE_GAD (//)
+Continue
+;
+MSG_NAME_GAD (//)
+Name:
+;
+MSG_HIGHSCORE_REQTITLE (//)
+Fastest Sweepers
+;
+MSG_ABOUT_REQTITLE (//)
+About %s
+;
+MSG_ABOUT_REQMSG (//)
+%s v%s\nBy %s %s\nCopyright © %s %s
+;
+MSG_NAME_REQTITLE (//)
+That was fast!!!

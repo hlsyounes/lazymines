@@ -1,19 +1,54 @@
+#ifndef IMAGES_H
+#define IMAGES_H
+
+/*
+ * images.h
+ * ========
+ * Interface to images.
+ */
+
 #include <exec/types.h>
-#include <intuition/intuition.h>
+#include <intuition/screens.h>
 
-chip UWORD flagData[] = {
-   0x0000, 0x1800, 0x1E00, 0x1F00, 0x0000, 0x1000, 0x7400, 0xFA00,
-   0x2000, 0x3800, 0x3E00, 0x3F00, 0x2000, 0x2000, 0x0000, 0x0000
-};
 
-struct Image flagImage = {
-   0, 0, 8, 8, 2, flagData, 3, 0, NULL
-};
+#define IMAGESIZE(w, h) (((((w) + 15) >> 4) << 4) * (h))
 
-chip UWORD mineData[] = {
-   0x0000, 0x1000, 0x3C00, 0x6F00, 0xFE00, 0x3C00, 0x0800, 0x0000
-};
+#define FLAGIMAGE_WIDTH    8
+#define FLAGIMAGE_HEIGHT   8
 
-struct Image mineImage = {
-   0, 0, 8, 8, 1, mineData, 1, 0, NULL
-};
+extern UBYTE   flagimage[];
+
+#define BOMBIMAGE_WIDTH    8
+#define BOMBIMAGE_HEIGHT   6
+
+extern UBYTE   bombimage[];
+
+#define DIGITIMAGE_WIDTH    13
+#define DIGITIMAGE_HEIGHT   21
+
+extern UBYTE digitimages[];
+
+#define EMPTYDIGIT   10
+#define DIGITIMAGE(n) (&digitimages[(n) * IMAGESIZE (DIGITIMAGE_WIDTH, DIGITIMAGE_HEIGHT)])
+
+#define MAX_IMAGEWIDTH     13
+#define MAX_IMAGEHEIGHT    21
+
+
+BOOL
+init_images (
+   struct Window  *win);
+
+void
+finalize_images (void);
+
+void
+draw_image (
+   struct RastPort  *rp,
+   UWORD             x_pos,
+   UWORD             y_pos,
+   UWORD             width,
+   UWORD             height,
+   UBYTE            *image);
+
+#endif
