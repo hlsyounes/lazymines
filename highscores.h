@@ -20,11 +20,9 @@ save_high_scores (void);
 
 BOOL
 update_high_score (
-   UBYTE   game,
    UWORD   score);
 
 void
-display_high_scores (
-   UBYTE   game);
+display_high_scores (void);
 
 #endif

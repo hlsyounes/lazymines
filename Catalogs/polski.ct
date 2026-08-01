@@ -1,134 +1,134 @@
-## version $VER: lazymines.catalog 3.0 (19.5.95)
+## version $VER: lazymines.catalog 3.0 (12.5.95)
 ## codeset 0
-## language svenska
+## language polski
 ;
 MSG_GAME_MENU
- \0Spel
+ \0Gra
 ;
 MSG_GAME_NEW
-N\0Nytt
+N\0Nowa
 ;
 MSG_GAME_NOVICE
-1\0Nybörjare
+1\0Nowicjusz
 ;
 MSG_GAME_AMATEUR
-2\0Amatör
+2\0Amator
 ;
 MSG_GAME_EXPERT
-3\0Expert
+3\0Ekspert
 ;
 MSG_GAME_OPTIONAL
-0\0Valfri...
+0\0Opcje...
 ;
 MSG_GAME_HIGHSCORE
- \0Snabbaste röjare...
+ \0Najszybsi minerzy...
 ;
 MSG_GAME_ABOUT
-?\0Om...
+?\0O programie...
 ;
 MSG_GAME_QUIT
-Q\0Avsluta LazyMines
+Q\0Skoïcz
 ;
 MSG_SETTINGS_MENU
- \0Inställningar
+ \0Ustawienia
 ;
 MSG_SETTINGS_TASK
- \0Uppgift
+ \0Rodzaj zadania:
 ;
 MSG_SETTINGS_TASK_ALL
- \0Röj allt
+ \0oznacz caîe pole.
 ;
 MSG_SETTINGS_TASK_PATH
- \0Röj väg
+ \0wyznacz ôcieûkë.
 ;
 MSG_SETTINGS_AUTOOPEN
- \0Automatisk Öppning...
+ \0Automatyczne otwarcia...
 ;
 MSG_SETTINGS_WARNINGS
- \0Varningar
+ \0Ostrzeûenia
 ;
 MSG_SETTINGS_NOCOLORS
- \0Inga färger
+ \0Bez kolorów
 ;
 MSG_SETTINGS_SAVE
- \0Spara Inställningar
+ \0Zapisz ustawienia
 ;
 MSG_CONTINUE_GAD
-Fortsätt
+Kontynuuj
 ;
 MSG_OK_GAD
 OK
 ;
 MSG_NUMROWS_GAD
-Antal rader
+Iloôê szeregów
 ;
 MSG_NUMCOLS_GAD
-Antal kolumner
+Iloôê kolumn
 ;
 MSG_NUMMINES_GAD
-Antal minor
+Iloôê min
 ;
 MSG_NAME_GAD
-Namn:
+Gracz:
 ;
 MSG_ABOUT_REQTITLE
-Om
+O programie
 ;
 MSG_ABOUT_REQMSG
-Av %s (%s)\n\
+%s (%s)\n\
 Copyright © %s %s
 ;
 MSG_OPTIONAL_REQTITLE
-Valfri nivå
+Opcje gracza
 ;
 MSG_AUTOOPEN_REQTITLE
-Automatisk öppning
+Automatyczne otwarcia
 ;
 MSG_NAME_REQTITLE
-Det var snabbt!!!
+To naprawdë szybka akcja!!!
 ;
 MSG_HIGHSCORES_REQTITLE
-Snabbaste röjare
+Najszybsi minerzy
 ;
 MSG_ERROR_REQTITLE
-Felmeddelande
+Komunikat o bîëdzie
 ;
 MSG_INITIALIZE_FIELD
-Initierar minfält...
+Tworzë pole minowe...
 ;
 MSG_GENERATE_PATH
-Genererar väg (%3d)...
+Generujë ôcieûkë (%3d)...
 ;
 MSG_OPEN_ERROR
-Kunde inte öppna %s!
+Nie mogë otworzyê %s!
 ;
 MSG_CREATE_ERROR
-Kunde inte skapa %s!
+Nie mogë stworzyê %s!
 ;
 MSG_GET_ERROR
-Kunde inte läsa %s!
+Nie mogë wziâê %s!
 ;
 MSG_SMALLSCREEN_ERROR
-Skärmen är för liten!
+Ekran jest zbyt maîy!!!
 ;
 MSG_LOCKSCREEN_ERROR
-Kunde inte låsa offentlig skärm!
+Nie mogë znalúê ekranu publicznego!!!
 ;
 MSG_SETMENU_ERROR
-Kunde inte sätta menyraden!
+Nie mogë ustawiê menustrip!
 ;
 MSG_LAYOUTMENU_ERROR
-Kunde inte utforma menyn!
+Nie mogë uîoûyê menu!
 ;
 MSG_MINEFIELD
-minfält
+pole minowe
 ;
 MSG_COUNTERS
-räknare
+counters
 ;
 MSG_WINDOW
-fönster
+okno
 ;
 MSG_MENU
-meny
+menu
 ;

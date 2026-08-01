@@ -6,19 +6,22 @@
  * Copyright (C) 1994 Lorens Younes (d93-hyo@nada.kth.se)
  */
 
-#include <exec/types.h>
-#include <workbench/startup.h>
-#include <workbench/workbench.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <proto/dos.h>
+#include <exec/types.h>
+#include <proto/exec.h>
+#include <proto/icon.h>
+#include <workbench/startup.h>
+#include <workbench/workbench.h>
+
+#include "game.h"
 #include "tooltypes.h"
 
-#include <clib/dos_protos.h>
-#include <clib/exec_protos.h>
-#include <clib/icon_protos.h>
 
-
-#define NUM_TOOLTYPES   5
+#define NUM_TOOLTYPES   11
 
 
 struct Library  *IconBase;
@@ -28,12 +31,16 @@ static BPTR   dir_lock = NULL;
 static char   prg_name[256];
 
 /* where to put the toolvalues */
-extern char    pubscr_name[];
-extern UBYTE   current_level;
-extern BOOL    place_warnings;
-extern BOOL    safe_opening;
-extern BOOL    auto_lock;
-
+extern char     pubscr_name[];    /* PUBSCREEN=<name of public screen> */
+extern UBYTE    current_level;    /* LEVEL=<0-3> */
+extern BOOL     place_warnings;   /* WARNINGS */
+extern UBYTE    auto_opening;     /* AUTOOPEN=<0-10> */
+extern UBYTE    chosen_task;      /* TASK=<ALL, PATH> */
+extern BOOL     display_colors;   /* NOCOLORS */
+extern LONG     win_left;         /* LEFT=<left edge> */
+extern LONG     win_top;          /* TOP=<top edge */
+extern struct Window  *main_win;
+extern struct level   levels[];   /* OPTIONALROWS... */
 
 /* reads the tooltypes */
 static void
@@ -52,21 +59,43 @@ read_tooltypes (void)
       {
          if (tool_val = FindToolType (disk_obj->do_ToolTypes, "PUBSCREEN"))
             strncpy (pubscr_name, tool_val, 128);
-         if (tool_val = FindToolType (disk_obj->do_ToolTypes, "WARNINGS"))
-            place_warnings = TRUE;
-         if (tool_val = FindToolType (disk_obj->do_ToolTypes, "AUTOMARK"))
-            auto_lock = TRUE;
-         if (tool_val = FindToolType (disk_obj->do_ToolTypes, "SAFEOPEN"))
-            safe_opening = TRUE;
+         if (tool_val = FindToolType (disk_obj->do_ToolTypes, "LEFT"))
+            win_left = atoi (tool_val);
+         if (tool_val = FindToolType (disk_obj->do_ToolTypes, "TOP"))
+            win_top = atoi (tool_val);
          if (tool_val = FindToolType (disk_obj->do_ToolTypes, "LEVEL"))
          {
             if (MatchToolValue (tool_val, "Novice"))
-               current_level = 0;
-            else if (MatchToolValue (tool_val, "Amature"))
                current_level = 1;
-            else if (MatchToolValue (tool_val, "Expert"))
+            else if (MatchToolValue (tool_val, "Amateur"))
                current_level = 2;
+            else if (MatchToolValue (tool_val, "Expert"))
+               current_level = 3;
+            else if (MatchToolValue (tool_val, "Optional"))
+               current_level = 0;
          }
+         if (tool_val = FindToolType (disk_obj->do_ToolTypes, "OPTIONALROWS"))
+            levels[0].rows = atoi (tool_val);
+         if (tool_val = FindToolType (disk_obj->do_ToolTypes, "OPTIONALCOLS"))
+            levels[0].columns = atoi (tool_val);
+         if (tool_val = FindToolType (disk_obj->do_ToolTypes,
+                                      "OPTIONALMINES"))
+         {
+            levels[0].bombs = atoi (tool_val);
+         }
+         if (tool_val = FindToolType (disk_obj->do_ToolTypes, "TASK"))
+         {
+            if (MatchToolValue (tool_val, "All"))
+               chosen_task = 0;
+            else if (MatchToolValue (tool_val, "Path"))
+               chosen_task = 1;
+         }
+         if (tool_val = FindToolType (disk_obj->do_ToolTypes, "AUTOOPEN"))
+            auto_opening = atoi (tool_val);
+         if (tool_val = FindToolType (disk_obj->do_ToolTypes, "WARNINGS"))
+            place_warnings = TRUE;
+         if (tool_val = FindToolType (disk_obj->do_ToolTypes, "NOCOLORS"))
+            display_colors = FALSE;
          FreeDiskObject (disk_obj);
       }
       
@@ -100,10 +129,16 @@ save_tooltypes (void)
             ++n;
          
          old_toolval[0] = FindToolType (old_toolarray, "PUBSCREEN");
-         old_toolval[1] = FindToolType (old_toolarray, "LEVEL");
-         old_toolval[2] = FindToolType (old_toolarray, "WARNINGS");
-         old_toolval[3] = FindToolType (old_toolarray, "AUTOMARK");
-         old_toolval[4] = FindToolType (old_toolarray, "SAFEOPEN");
+         old_toolval[1] = FindToolType (old_toolarray, "LEFT");
+         old_toolval[2] = FindToolType (old_toolarray, "TOP");
+         old_toolval[3] = FindToolType (old_toolarray, "LEVEL");
+         old_toolval[4] = FindToolType (old_toolarray, "OPTIONALROWS");
+         old_toolval[5] = FindToolType (old_toolarray, "OPTIONALCOLS");
+         old_toolval[6] = FindToolType (old_toolarray, "OPTIONALMINES");
+         old_toolval[7] = FindToolType (old_toolarray, "TASK");
+         old_toolval[8] = FindToolType (old_toolarray, "AUTOOPEN");
+         old_toolval[9] = FindToolType (old_toolarray, "WARNINGS");
+         old_toolval[10] = FindToolType (old_toolarray, "NOCOLORS");
          for (i = 0; i < NUM_TOOLTYPES; ++i)
          {
             if (old_toolval[i] == NULL)
@@ -122,26 +157,43 @@ save_tooltypes (void)
                         "(PUBSCREEN=<name of public screen>)", 128);
             }
             
-            strncpy (tooltypes[1], "LEVEL=", 128);
-            if (current_level == 0)
-               strncat (tooltypes[1], "Novice", 128);
+            sprintf (tooltypes[1], "LEFT=%d", main_win->LeftEdge);
+            
+            sprintf (tooltypes[2], "TOP=%d", main_win->TopEdge);
+            
+            strncpy (tooltypes[3], "LEVEL=", 128);
             if (current_level == 1)
-               strncat (tooltypes[1], "Amature", 128);
-            if (current_level == 2)
-               strncat (tooltypes[1], "Expert", 128);
+               strncat (tooltypes[3], "Novice", 128);
+            else if (current_level == 2)
+               strncat (tooltypes[3], "Amature", 128);
+            else if (current_level == 3)
+               strncat (tooltypes[3], "Expert", 128);
+            else if (current_level == 0)
+               strncat (tooltypes[3], "Optional", 128);
+            
+            sprintf (tooltypes[4], "OPTIONALROWS=%d", levels[0].rows);
+            
+            sprintf (tooltypes[5], "OPTIONALCOLS=%d", levels[0].columns);
+            
+            sprintf (tooltypes[6], "OPTIONALMINES=%d", levels[0].bombs);
+            
+            strncpy (tooltypes[7], "TASK=", 128);
+            if (chosen_task == 0)
+               strncat (tooltypes[7], "All", 128);
+            else if (chosen_task == 1)
+               strncat (tooltypes[7], "Path", 128);
+            
+            sprintf (tooltypes[8], "AUTOOPEN=%d", auto_opening);
             
             if (place_warnings)
-               strncpy (tooltypes[2], "WARNINGS", 128);
+               strncpy (tooltypes[9], "WARNINGS", 128);
             else
-               strncpy (tooltypes[2], "(WARNINGS)", 128);
-            if (auto_lock)
-               strncpy (tooltypes[3], "AUTOMARK", 128);
+               strncpy (tooltypes[9], "(WARNINGS)", 128);
+            
+            if (display_colors)
+               strncpy (tooltypes[10], "(NOCOLORS)", 128);
             else
-               strncpy (tooltypes[3], "(AUTOMARK)", 128);
-            if (safe_opening)
-               strncpy (tooltypes[4], "SAFEOPEN", 128);
-            else
-               strncpy (tooltypes[4], "(SAFEOPEN)", 128);
+               strncpy (tooltypes[10], "NOCOLORS", 128);
             
             i = 0;
             while (old_toolarray[i] != NULL)
@@ -154,37 +206,85 @@ save_tooltypes (void)
                   new_toolarray[i] = tooltypes[0];
                   old_toolval[0] = tooltypes[0];
                }
+               else if (strstr (old_toolarray[i], "LEFT=") ==
+                        old_toolarray[i] ||
+                        strstr (old_toolarray[i], "(LEFT=") ==
+                        old_toolarray[i])
+               {
+                  new_toolarray[i] = tooltypes[1];
+                  old_toolval[1] = tooltypes[1];
+               }
+               else if (strstr (old_toolarray[i], "TOP=") ==
+                        old_toolarray[i] ||
+                        strstr (old_toolarray[i], "(TOP=") ==
+                        old_toolarray[i])
+               {
+                  new_toolarray[i] = tooltypes[2];
+                  old_toolval[2] = tooltypes[2];
+               }
                else if (strstr (old_toolarray[i], "LEVEL=") ==
                         old_toolarray[i] ||
                         strstr (old_toolarray[i], "(LEVEL=") ==
                         old_toolarray[i])
                {
-                  new_toolarray[i] = tooltypes[1];
-                  old_toolval[1] = tooltypes[1];
+                  new_toolarray[i] = tooltypes[3];
+                  old_toolval[3] = tooltypes[3];
+               }
+               else if (strstr (old_toolarray[i], "OPTIONALROWS=") ==
+                        old_toolarray[i] ||
+                        strstr (old_toolarray[i], "(OPTIONALROWS=") ==
+                        old_toolarray[i])
+               {
+                  new_toolarray[i] = tooltypes[4];
+                  old_toolval[4] = tooltypes[4];
+               }
+               else if (strstr (old_toolarray[i], "OPTIONALCOLS=") ==
+                        old_toolarray[i] ||
+                        strstr (old_toolarray[i], "(OPTIONALCOLS=") ==
+                        old_toolarray[i])
+               {
+                  new_toolarray[i] = tooltypes[5];
+                  old_toolval[5] = tooltypes[5];
+               }
+               else if (strstr (old_toolarray[i], "OPTIONALMINES=") ==
+                        old_toolarray[i] ||
+                        strstr (old_toolarray[i], "(OPTIONALMINES=") ==
+                        old_toolarray[i])
+               {
+                  new_toolarray[i] = tooltypes[6];
+                  old_toolval[6] = tooltypes[6];
+               }
+               else if (strstr (old_toolarray[i], "TASK=") ==
+                        old_toolarray[i] ||
+                        strstr (old_toolarray[i], "(TASK=") ==
+                        old_toolarray[i])
+               {
+                  new_toolarray[i] = tooltypes[7];
+                  old_toolval[7] = tooltypes[7];
+               }
+               else if (strstr (old_toolarray[i], "AUTOOPEN=") ==
+                        old_toolarray[i] ||
+                        strstr (old_toolarray[i], "(AUTOOPEN=") ==
+                        old_toolarray[i])
+               {
+                  new_toolarray[i] = tooltypes[8];
+                  old_toolval[8] = tooltypes[8];
                }
                else if (strstr (old_toolarray[i], "WARNINGS") ==
                         old_toolarray[i] ||
                         strstr (old_toolarray[i], "(WARNINGS)") ==
                         old_toolarray[i])
                {
-                  new_toolarray[i] = tooltypes[2];
-                  old_toolval[2] = tooltypes[2];
+                  new_toolarray[i] = tooltypes[9];
+                  old_toolval[9] = tooltypes[9];
                }
-               else if (strstr (old_toolarray[i], "AUTOMARK") ==
+               else if (strstr (old_toolarray[i], "NOCOLORS") ==
                         old_toolarray[i] ||
-                        strstr (old_toolarray[i], "(AUTOMARK)") ==
+                        strstr (old_toolarray[i], "(NOCOLORS)") ==
                         old_toolarray[i])
                {
-                  new_toolarray[i] = tooltypes[3];
-                  old_toolval[2] = tooltypes[3];
-               }
-               else if (strstr (old_toolarray[i], "SAFEOPEN") ==
-                        old_toolarray[i] ||
-                        strstr (old_toolarray[i], "(SAFEOPEN)") ==
-                        old_toolarray[i])
-               {
-                  new_toolarray[i] = tooltypes[4];
-                  old_toolval[2] = tooltypes[4];
+                  new_toolarray[i] = tooltypes[10];
+                  old_toolval[10] = tooltypes[10];
                }
                else
                   new_toolarray[i] = old_toolarray[i];

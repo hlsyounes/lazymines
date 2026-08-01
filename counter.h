@@ -1,57 +1,78 @@
 #ifndef COUNTER_H
 #define COUNTER_H
-
 /*
  * counter.h
  * =========
- * Interface to digital counter.
+ * Interface to digital counters.
+ *
+ * Copyright © 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
  */
 
 #include <exec/types.h>
 #include <intuition/intuition.h>
-#include "images.h"
 
 
-#define COUNTERWIDTH    (3 * DIGITIMAGE_WIDTH + 6 * LINEWIDTH)
-#define COUNTERHEIGHT   (DIGITIMAGE_HEIGHT + 4 * LINEHEIGHT)
-
-
+/* Pointer to counter object */
 typedef struct counter  *counter_ptr;
 
 
-counter_ptr
-counter_init (
-   struct Window  *win,
-   WORD    left,
-   WORD    top,
-   UWORD   value,
-   BOOL    digital);
+/* Calculates the width that a digital counter will get */
+UWORD                   /* calculated width */
+counter_width (void);
 
+
+/* Calculates the height that a digital counter will get */
+UWORD                    /* calculated height */
+counter_height (void);
+
+
+/* Creates a new counter object */
+counter_ptr                    /* created counter */
+counter_init (
+   struct Window  *win,        /* window to use counter in */
+   WORD            left,       /* left offset */
+   WORD            top,        /* top offset */
+   UWORD           value,      /* initial value */
+   BOOL            digital);   /* digital counter? */
+
+
+/* Frees a counter object */
 void
 counter_free (
-   counter_ptr   counter);
+   counter_ptr   counter);   /* counter to free */
 
-UWORD
+
+/* Reads the value of a counter */
+UWORD                        /* the value */
 counter_value (
-   counter_ptr   counter);
+   counter_ptr   counter);   /* counter to read value from */
 
+
+/* Changes a counter's position */
 void
 counter_move (
-   counter_ptr   counter,
-   WORD          left,
-   WORD          top);
+   counter_ptr   counter,   /* counter to move */
+   WORD          left,      /* new left offset */
+   WORD          top);      /* new top offset */
 
+
+/* Draws a counter */
 void
 counter_draw (
-   counter_ptr       counter);
+   counter_ptr   counter,   /* counter to draw */
+   APTR          vi);       /* visual info */
 
+
+/* Deletes a counter */
 void
 counter_delete (
-   counter_ptr       counter);
+   counter_ptr   counter);   /* counter to delete */
 
+
+/* Sets the value of a counter */
 void
 counter_update (
-   counter_ptr       counter,
-   UWORD             value);
+   counter_ptr   counter,   /* counter to update */
+   UWORD         value);    /* new value */
 
 #endif

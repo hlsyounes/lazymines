@@ -1,54 +1,46 @@
 #ifndef IMAGES_H
 #define IMAGES_H
-
 /*
  * images.h
  * ========
- * Interface to images.
+ * The game images.
+ *
+ * Copyright © 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
  */
 
 #include <exec/types.h>
+#include <intuition/intuition.h>
 #include <intuition/screens.h>
 
 
-#define IMAGESIZE(w, h) (((((w) + 15) >> 4) << 4) * (h))
+/* Attributes for digits */
+#define DIGITWIDTH    13
+#define DIGITHEIGHT   21
+#define EMPTYDIGIT    10
 
-#define FLAGIMAGE_WIDTH    8
-#define FLAGIMAGE_HEIGHT   8
-
-extern UBYTE   flagimage[];
-
-#define BOMBIMAGE_WIDTH    8
-#define BOMBIMAGE_HEIGHT   6
-
-extern UBYTE   bombimage[];
-
-#define DIGITIMAGE_WIDTH    13
-#define DIGITIMAGE_HEIGHT   21
-
-extern UBYTE digitimages[];
-
-#define EMPTYDIGIT   10
-#define DIGITIMAGE(n) (&digitimages[(n) * IMAGESIZE (DIGITIMAGE_WIDTH, DIGITIMAGE_HEIGHT)])
-
-#define MAX_IMAGEWIDTH     13
-#define MAX_IMAGEHEIGHT    21
+/* The image objects */
+extern struct Image  *flag_image;
+extern struct Image  *mine_image;
+extern struct Image  *digit_images[];
+extern struct Image  *bigmine_image;
+extern struct Image  *face_image;
 
 
-BOOL
+/* Initialization of game images */
+BOOL                                  /* success? */
 init_images (
-   struct Window  *win);
+   struct Screen  *scr,               /* screen to use images on */
+   BOOL            create_digits,     /* create digit images? */
+   BOOL            display_colors);   /* colorfull images? */
 
+/* Change image colors */
 void
-finalize_images (void);
+update_images (
+   BOOL   display_colors);   /* colorfull images? */
 
+/* Finalization of game images */
 void
-draw_image (
-   struct RastPort  *rp,
-   UWORD             x_pos,
-   UWORD             y_pos,
-   UWORD             width,
-   UWORD             height,
-   UBYTE            *image);
+free_images (
+   struct Screen  *scr);   /* screen that images were used on */
 
 #endif

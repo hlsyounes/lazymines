@@ -1,40 +1,64 @@
 .ct.catalog:
    CatComp Catalogs/lazymines.cd $< CATALOG $@
 
-CFLAGS = math=ffp
 
-OBJS = lazymines.o strings.o localize.o requesters.o counter.o layout.o \
-       images.o field.o tooltypes.o highscores.o timer.o
+CFLAGS = optimize nochkabort math=ffp idir=myinclude: verbose
+
+OBJS = lazymines.o button.o counter.o field.o highscores.o images.o layout.o \
+       localize.o requesters.o timer.o tooltypes.o strings.o
+
+CFILES = \#?.c
+
+HFILES = button.h counter.h display_globals.h field.h game.h highscores.h \
+         images.h layout.h localize.h requesters.h timer.h tooltypes.h
+
+LOCFILES = Catalogs/(\#?.ct|\#?.cd|norsk|polski|svenska)
 
 
 all: LazyMines \
+     convscorefile \
+     Catalogs/Norsk/lazymines.catalog \
+     Catalogs/Polski/lazymines.catalog \
      Catalogs/Svenska/lazymines.catalog
-     
+
+
 LazyMines: $(OBJS)
    $(LD) FROM LIB:c.o $(OBJS) \
          TO LazyMines \
-         LIB LIB:scmffp.lib LIB:sc.lib LIB:amiga.lib
+         LIB LIB:scmffp.lib LIB:sc.lib LIB:amiga.lib MYLIB:chunkyiclass.lib \
+         STRIPDEBUG VERBOSE
 
+convscorefile: convscorefile.c
+   $(CC) verbose optimize link $<
 
+Catalogs/Norsk/lazymines.catalog: Catalogs/norsk.ct
+Catalogs/Polski/lazymines.catalog: Catalogs/polski.ct
 Catalogs/Svenska/lazymines.catalog: Catalogs/svenska.ct
 
-lazymines.o:  lazymines.c counter.h layout.h images.h game.h requesters.h \
-              localize.h field.h tooltypes.h highscores.h timer.h
-field.o:      field.c field.h layout.h
-counter.o:    counter.c counter.h layout.h images.h
-layout.o:     layout.c layout.h images.h game.h
-images.o:     images.c images.h layout.h
-highscores.o: highscores.c highscores.h layout_const.h
-tooltypes.o:  tooltypes.c tooltypes.h
-requesters.o: requesters.c requesters.h
+
+lazymines.o:  lazymines.c button.h timer.h game.h images.h layout.h \
+              counter.h field.h highscores.h requesters.h tooltypes.h \
+              localize.h display_globals.h
+button.o:     button.c button.h display_globals.h
+counter.o:    counter.c counter.h images.h display_globals.h
+field.o:      field.c field.h game.h counter.h images.h layout.h \
+              display_globals.h localize.h
+highscores.o: highscores.c highscores.h game.h localize.h requesters.h \
+              display_globals.h
+images.o:     images.c images.h layout.h display_globals.h
+layout.o:     layout.c layout.h counter.h display_globals.h game.h
 localize.o:   localize.c localize.h
+requesters.o: requesters.c requesters.h game.h localize.h display_globals.h
 timer.o:      timer.c timer.h
+tooltypes.o:  tooltypes.c tooltypes.h game.h
 
 localize.h: strings.o
-   copy localize.h temp >NIL:
-   delete localize.h >NIL:
-   copy temp localize.h >NIL:
-   delete temp >NIL:
+   setdate localize.h
 
 strings.o: Catalogs/lazymines.cd
    CatComp $< CFILE strings.h OBJFILE $@
+
+
+backup:
+   tar cf ram:lazymines3.0.tar $(CFILES) $(HFILES) $(LOCFILES) Smakefile
+   gzip ram:lazymines3.0.tar

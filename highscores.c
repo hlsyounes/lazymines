@@ -9,133 +9,116 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <proto/dos.h>
 #include <exec/types.h>
+#include <proto/exec.h>
+#include <proto/gadtools.h>
+#include <graphics/gfxmacros.h>
+#include <proto/graphics.h>
+#include <proto/intuition.h>
+
+#include "display_globals.h"
 #include "requesters.h"
 #include "localize.h"
-#include "layout_const.h"
+#include "game.h"
 #include "highscores.h"
 
-#include <clib/dos_protos.h>
-#include <clib/exec_protos.h>
-#include <clib/graphics_protos.h>
-#include <clib/intuition_protos.h>
 
+#define HSMAGIC      "LZM#30HS"
 
 #define NUM_SCORES   10
 
 
 extern struct Window  *main_win;
 extern APTR   vis_info;
-extern UWORD  *gui_pens;
 
 
-static char    names[NUM_SCORES][3][31];
-static UWORD   scores[NUM_SCORES][3];
+struct highscore {
+   char    name[31];
+   UWORD   score;
+};
+
+static struct highscore   hiscores[2][3][NUM_SCORES];
 static BOOL    need_save = FALSE;
+
+
+static void
+default_scorers (
+   char  *name)
+{
+   int   i, j, k;
+   
+   
+   for (i = 0; i < 2; ++i)
+   {
+      for (j = 0; j < 3; ++j)
+      {
+         for (k = 0; k < NUM_SCORES; ++k)
+         {
+            strcpy (hiscores[i][j][k].name, name);
+            hiscores[i][j][k].score = 999;
+         }
+      }
+   }
+}
 
 
 void
 load_high_scores (
    char  *default_name)
 {
-   register UWORD   i = 0, j = 0, k = 0, m;
-   FILE  *score_file;
-   int   ch;
-   char   num_str[4];
-   UBYTE   status = 0;
+   BPTR   fh;
+   char   check[11];
+   int    i, j, k;
    
-   if (score_file = fopen ("lazymines.hiscore", "r"))
-   {
-      while ((ch = fgetc (score_file)) != EOF && k < NUM_SCORES)
-      {
-         if (status == 0)
-         {
-            if (ch == '\n')
-            {
-               names[k][j][i] = '\0';
-               ++status;
-               i = 0;
-            }
-            else
-            {
-               names[k][j][i] = ch;
-               ++i;
-            }
-         }
-         else
-         {
-            if (ch == '\n')
-            {
-               num_str[i] = '\0';
-               scores[k][j] = atoi (num_str);
-               ++status;
-               if (status > 1)
-               {
-                  status = 0;
-                  ++j;
-                  if (j > 2)
-                  {
-                     j = 0;
-                     ++k;
-                  }
-               }
-               i = 0;
-            }
-            else
-            {
-               num_str[i] = ch;
-               ++i;
-            }
-         }
-      }
-      fclose (score_file);
-   }
    
-   for (m = k; m < NUM_SCORES; ++m)
+   if (fh = Open ("LazyMines.hiscore", MODE_OLDFILE))
    {
-      for (i = j; i < 3; ++i)
+      Read (fh, check, sizeof (HSMAGIC));
+      if (!strcmp (check, HSMAGIC))
       {
-         switch (status)
-         {
-         case 0:
-            strncpy (names[m][i], default_name, 30);
-         case 1:
-            scores[m][i] = 999;
-            status = 0;
-            break;
-         }
+         for (i = 0; i < 2; ++i)
+            for (j = 0; j < 3; ++j)
+               for (k = 0; k < NUM_SCORES; ++k)
+                  Read (fh, &hiscores[i][j][k], sizeof (hiscores[i][j][k]));
       }
+      else
+         default_scorers (default_name);
+      
+      Close (fh);
    }
+   else
+      default_scorers (default_name);
 }
+
 
 void
 save_high_scores (void)
 {
-   register UBYTE   i, j;
-   FILE *score_file;
+   BPTR   fh;
+   int    i, j, k;
+   
    
    if (need_save)
    {
-      if (score_file = fopen ("lazymines.hiscore", "w"))
+      if (fh = Open ("LazyMines.hiscore", MODE_NEWFILE))
       {
-         for (j = 0; j < NUM_SCORES; ++j)
-         {
-            for (i = 0; i < 3; ++i)
-            {
-               fputs (names[j][i], score_file);
-               fputc ('\n', score_file);
-               fprintf (score_file, "%d\n", scores[j][i]);
-            }
-         }
-         fclose (score_file);
-         SetProtection ("lazymines.hiscore", 2);
+         Write (fh, HSMAGIC, sizeof (HSMAGIC));
+         for (i = 0; i < 2; ++i)
+            for (j = 0; j < 3; ++j)
+               for (k = 0; k < NUM_SCORES; ++k)
+                  Write (fh, &hiscores[i][j][k], sizeof (hiscores[i][j][k]));
+      
+         Close (fh);
+         SetProtection ("LazyMines.hiscore", 2);
       }
    }
 }
 
+
 BOOL
 update_high_score (
-   UBYTE   game,
    UWORD   score)
 {
    char   name[31];
@@ -146,14 +129,16 @@ update_high_score (
    
    while (n >= 0)
    {
-      if (score <= scores[n][game])
+      if (score <= hiscores[task][current_level - 1][n].score)
       {
          need_save = TRUE;
          
          if (n < NUM_SCORES - 1)
          {
-            strcpy (names[n + 1][game], names[n][game]);
-            scores[n + 1][game] = scores[n][game];
+            strcpy (hiscores[task][current_level - 1][n + 1].name,
+                    hiscores[task][current_level - 1][n].name);
+            hiscores[task][current_level - 1][n + 1].score =
+                                   hiscores[task][current_level - 1][n].score;
          }
          
          if (get_name)
@@ -165,8 +150,8 @@ update_high_score (
             get_name = FALSE;
          }
          
-         strcpy (names[n][game], name);
-         scores[n][game] = score;
+         strcpy (hiscores[task][current_level - 1][n].name, name);
+         hiscores[task][current_level - 1][n].score = score;
       }
       --n;
    }
@@ -174,67 +159,146 @@ update_high_score (
    return (BOOL)(!get_name);
 }
 
+
 void
-display_high_scores (
-   UBYTE   game)
+display_high_scores (void)
 {
-   register UBYTE   n;
-   struct Window  *win;
-   struct IntuiMessage  *msg;
-   BOOL   done = FALSE;
-   struct Requester   req;
-   BOOL   win_sleep = FALSE;
-   char   text_buf[81];
-   UWORD   width, height;
-   WORD    left, top;
+   struct RastPort   layout_rp;
+   ULONG             box_w, box_h, win_w, win_h;
+   register UBYTE    n;
+   char              text_buf[38], win_title[128];
+   STRPTR            label;
    
-   win_sleep = window_sleep (main_win, &req);
-   width = main_win->BorderLeft + main_win->BorderRight +
-           34 * main_win->RPort->TxWidth + 2 * INTERWIDTH;
-   height = main_win->BorderTop + main_win->BorderBottom +
-            NUM_SCORES * main_win->RPort->TxHeight + 2 * INTERHEIGHT;
-   left = main_win->LeftEdge + (main_win->Width - width) / 2;
-   top = main_win->TopEdge + (main_win->Height - height) / 2;
-   win = OpenWindowTags (NULL,
-                         WA_Left, (width > main_win->WScreen->Width - left) ?
-                                  main_win->WScreen->Width - width : left,
-                         WA_Top, (height > main_win->WScreen->Height - top) ?
-                                 main_win->WScreen->Height - height : top,
-                         WA_Width, width,
-                         WA_Height, height,
-                         WA_AutoAdjust, FALSE,
-                         WA_Title, localized_string (MSG_HIGHSCORE_REQTITLE),
-                         WA_ScreenTitle, main_win->ScreenTitle,
-                         WA_PubScreen, main_win->WScreen,
-                         WA_IDCMP, IDCMP_MOUSEBUTTONS,
-                         WA_DragBar, TRUE,
-                         WA_DepthGadget, TRUE,
-                         WA_Activate, TRUE,
-                         TAG_DONE);
-   if (win != NULL)
+   struct NewGadget   ng;
+   struct Gadget     *gad_list, *ok_gad;
+   struct Window     *req_win;
+   struct Requester   req;
+   BOOL               win_sleep, done = FALSE;
+   
+   
+   InitRastPort (&layout_rp);
+   box_w = 37 * layout_rp.TxWidth + 2 * (INTERWIDTH + LINEWIDTH);
+   box_h = NUM_SCORES * layout_rp.TxHeight + 2 * (INTERHEIGHT + LINEHEIGHT);
+   
+   label = localized_string (MSG_CONTINUE_GAD);
+   ng.ng_TextAttr = main_win->WScreen->Font;
+   ng.ng_VisualInfo = vis_info;
+   ng.ng_Width = TextLength (&main_win->WScreen->RastPort,
+                             label, strlen (label)) +
+                 INTERWIDTH + 2 * LINEWIDTH;
+   ng.ng_Height = main_win->WScreen->Font->ta_YSize +
+                  INTERHEIGHT + 2 * LINEHEIGHT;
+   win_w = ((box_w > ng.ng_Width) ? box_w : ng.ng_Width) + 2 * INTERWIDTH +
+           main_win->BorderLeft + main_win->BorderRight;
+   win_h = box_h + ng.ng_Height + 3 * INTERHEIGHT +
+           main_win->BorderTop + main_win->BorderBottom;
+   ng.ng_LeftEdge = (win_w - ng.ng_Width) / 2;
+   ng.ng_TopEdge = main_win->BorderTop + 2 * INTERHEIGHT + box_h;
+   ng.ng_GadgetText = label;
+   ng.ng_GadgetID = 0;
+   ng.ng_Flags = 0;
+   
+   ok_gad = CreateContext (&gad_list);
+   ok_gad = CreateGadget (BUTTON_KIND, ok_gad, &ng, TAG_DONE);
+   
+   if (ok_gad)
    {
-      SetAPen (win->RPort, gui_pens[TEXTPEN]);
-      for (n = 0; n < NUM_SCORES; ++n)
+      sprintf (win_title, "%s - %s (%s)",
+               localized_string (MSG_HIGHSCORES_REQTITLE),
+               localized_string (MSG_GAME_NOVICE + current_level - 1) + 2,
+               localized_string (MSG_SETTINGS_TASK_ALL + task) + 2);
+      req_win = OpenWindowTags (NULL,
+                                WA_Left, main_win->LeftEdge +
+                                         (main_win->Width - win_w) / 2,
+                                WA_Top, main_win->TopEdge +
+                                        (main_win->Height - win_h) / 2,
+                                WA_Width, win_w,
+                                WA_Height, win_h,
+                                WA_Title, win_title,
+                                WA_ScreenTitle, main_win->ScreenTitle,
+                                WA_PubScreen, main_win->WScreen,
+                                WA_IDCMP, BUTTONIDCMP | IDCMP_REFRESHWINDOW,
+                                WA_DragBar, TRUE,
+                                WA_DepthGadget, TRUE,
+                                WA_Activate, TRUE,
+                                TAG_DONE);
+      if (req_win)
       {
-         Move (win->RPort, win->BorderLeft + INTERWIDTH,
-               win->BorderTop + INTERHEIGHT + n * win->RPort->TxHeight +
-               win->RPort->TxBaseline);
-         sprintf (text_buf, "%-30s %3d", names[n][game], scores[n][game]);
-         Text (win->RPort, text_buf, strlen (text_buf));
-      }
-      
-      while (!done)
-      {
-         WaitPort (win->UserPort);
-         while (msg = (struct IntuiMessage *)GetMsg (win->UserPort))
+         ULONG   winsig, timersig, sigmask;
+         struct IntuiMessage  *msg;
+         UWORD   dither_data[] = { 0xAAAA, 0x5555 };
+         
+         
+         win_sleep = window_sleep (main_win, &req);
+         SetAPen (req_win->RPort, gui_pens[SHINEPEN]);
+         SetAfPt (req_win->RPort, dither_data, 1);
+         RectFill (req_win->RPort, req_win->BorderLeft, req_win->BorderTop,
+                   req_win->Width - req_win->BorderRight - 1,
+                   req_win->Height - req_win->BorderBottom - 1);
+         SetAPen (req_win->RPort, gui_pens[BACKGROUNDPEN]);
+         SetAfPt (req_win->RPort, NULL, 0);
+         RectFill (req_win->RPort, req_win->BorderLeft + INTERWIDTH,
+                   req_win->BorderTop + INTERHEIGHT,
+                   req_win->BorderLeft + INTERWIDTH + box_w - 1,
+                   req_win->BorderTop + INTERHEIGHT + box_h - 1);
+         DrawBevelBox (req_win->RPort, req_win->BorderLeft + INTERWIDTH,
+                       req_win->BorderTop + INTERHEIGHT, box_w, box_h,
+                       GT_VisualInfo, vis_info, GTBB_Recessed, TRUE,
+                       TAG_DONE);
+         AddGList (req_win, gad_list, -1, -1, NULL);
+         RefreshGList (gad_list, req_win, NULL, -1);
+         GT_RefreshWindow (req_win, NULL);
+         
+         SetAPen (req_win->RPort, gui_pens[TEXTPEN]);
+         for (n = 0; n < NUM_SCORES; ++n)
          {
-            done = (msg->Class == IDCMP_MOUSEBUTTONS &&
-                    msg->Code == SELECTDOWN);
-            ReplyMsg ((struct Message *)msg);
+            Move (req_win->RPort,
+                  req_win->BorderLeft + 2 * INTERWIDTH + LINEWIDTH,
+                  req_win->BorderTop + 2 * INTERHEIGHT + LINEHEIGHT +
+                  n * req_win->RPort->TxHeight + req_win->RPort->TxBaseline);
+            sprintf (text_buf, "%2d %-30s %3d", n + 1,
+                     hiscores[task][current_level - 1][n].name,
+                     hiscores[task][current_level - 1][n].score);
+            Text (req_win->RPort, text_buf, strlen (text_buf));
          }
+         
+         winsig = 1L << req_win->UserPort->mp_SigBit;
+         timersig = timer_signal (timer_obj);
+         while (!done)
+         {
+            sigmask = Wait (winsig | timersig);
+            if (sigmask & winsig)
+            {
+               while (msg = GT_GetIMsg (req_win->UserPort))
+               {
+                  switch (msg->Class)
+                  {
+                  case IDCMP_GADGETUP:
+                     done = TRUE;
+                     break;
+                  case IDCMP_REFRESHWINDOW:
+                     GT_BeginRefresh (req_win);
+                     GT_EndRefresh (req_win, TRUE);
+                     break;
+                  }
+                  GT_ReplyIMsg (msg);
+               }
+            }
+            if (sigmask & timersig)
+            {
+               timer_reply (timer_obj);
+               if (time_on)
+               {
+                  timer_start (timer_obj, 0L, 1000000L);
+                  counter_update (time_counter,
+                                  counter_value (time_counter) + 1);
+               }
+            }
+         }
+         if (win_sleep)
+            window_wakeup (main_win, &req);
+         CloseWindow (req_win);
       }
-      CloseWindow (win);
+      FreeGadgets (gad_list);
    }
-   if (win_sleep)
-      window_wakeup (main_win, &req);
 }

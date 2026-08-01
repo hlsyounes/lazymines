@@ -44,25 +44,11 @@ window_wakeup (
    struct Window     *win,
    struct Requester  *req);
 
-/*
- * msg_requester
- * -------------
- * Displays a message within a requester.
- *
- * Arguments:
- *  win       - Pointer to window that owns the requester. Can be NULL.
- *  title     - Title of the requester.
- *  gad_title - Title of the "ok"-gadget.
- *  message   - The message to be displayed.
- * Returnvalue:
- *  none
- */
 void
-msg_requester (
+error_requester (
    struct Window  *win,
-   char           *title,
-   char           *gad_title,
-   char           *message);
+   ULONG           msg,
+   char           *more);
 
 void
 string_requester (
@@ -72,5 +58,21 @@ string_requester (
    char           *gad_title,
    char           *buffer,
    UBYTE           buf_size);
+
+void
+about_requester (
+   struct Window  *win,
+   struct Image   *img,
+   STRPTR          name,
+   STRPTR          version,
+   STRPTR          msg_str);
+
+void
+request_optional_size (
+   struct Window  *win);
+
+void
+request_autoopening (
+   struct Window  *win);
 
 #endif

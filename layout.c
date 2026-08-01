@@ -6,13 +6,14 @@
 
 #include <exec/types.h>
 #include <graphics/gfxbase.h>
-#include <intuition/screens.h>
+#include <proto/graphics.h>
 #include <libraries/gadtools.h>
-#include "game.h"
-#include "images.h"
-#include "layout.h"
+#include <intuition/screens.h>
 
-#include <clib/graphics_protos.h>
+#include "game.h"
+#include "display_globals.h"
+#include "counter.h"
+#include "layout.h"
 
 
 #define max(a, b) (((a) > (b)) ? (a) : (b))
@@ -30,9 +31,11 @@ field_extent (
 
 extern struct GfxBase  *GfxBase;
 
+UBYTE   max_rows, max_columns;
 UBYTE   cell_space;
 UBYTE   cell_w, cell_h;
 BOOL    digital_display;
+BOOL    display_colors = TRUE;
 
 WORD    game_pens[NUM_GAMEPENS];
 UWORD  *gui_pens;
@@ -45,15 +48,7 @@ static ULONG   game_colors[NUM_GAMEPENS][3] = {
    { 0x83838383, 0x00000000, 0x30303030 },
    { 0x00000000, 0xAAAAAAAA, 0xAAAAAAAA },
    { 0x00000000, 0x00000000, 0x00000000 },
-   { 0x61616161, 0x61616161, 0x61616161 },
-   { 0xE1E1E1E1, 0x00000000, 0x53535353 },
-   { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF },
-   { 0x83838383, 0x00000000, 0x30303030 },
-   { 0x00000000, 0x00000000, 0x00000000 },
-   { 0x00000000, 0x00000000, 0x00000000 },
-   { 0x00000000, 0x00000000, 0x00000000 },
-   { 0xE1E1E1E1, 0x00000000, 0x53535353 },
-   { 0x83838383, 0x00000000, 0x30303030 }
+   { 0x61616161, 0x61616161, 0x61616161 }
 };
 
 
@@ -90,13 +85,24 @@ window_extent (
    {
       UWORD   digital_w;
       
-      digital_w = 6 * DIGITIMAGE_WIDTH + 12 * LINEWIDTH + INTERWIDTH;
+      digital_w = 2 * counter_width () + INTERWIDTH;
       *used_w = max (*used_w, digital_w);
-      *used_h += DIGITIMAGE_HEIGHT + 4 * LINEHEIGHT + INTERHEIGHT;
+      *used_h += counter_height () + INTERHEIGHT;
    }
    *used_w += 2 * (INTERWIDTH + LINEWIDTH) + scr->WBorLeft + scr->WBorRight;
    *used_h += 2 * (INTERHEIGHT + LINEHEIGHT) + scr->WBorTop + scr->WBorBottom +
               scr->Font->ta_YSize + 1;
+   
+   max_columns = (scr->Width - scr->WBorLeft - scr->WBorRight -
+                  2 * (INTERWIDTH + INTERHEIGHT)) / cell_w;
+   if (max_columns > MAX_COLUMNS)
+      max_columns = MAX_COLUMNS;
+   max_rows = (scr->Height - scr->WBorTop - scr->WBorBottom -
+               scr->Font->ta_YSize - 2 * (INTERHEIGHT + LINEHEIGHT) -
+               ((digital_display) ? counter_height () + INTERHEIGHT : 0)) / 
+              cell_h;
+   if (max_rows > MAX_ROWS)
+      max_rows = MAX_ROWS;
 }
 
 void
@@ -118,11 +124,11 @@ init_pens (
          if (game_pens[i] == gui_pens[BACKGROUNDPEN])
          {
             ReleasePen (scr->ViewPort.ColorMap, game_pens[i]);
-            game_pens[i] = NOPEN;
+            game_pens[i] = -1;
          }
       }
       else
-         game_pens[i] = NOPEN;
+         game_pens[i] = -1;
    }
 }
 
@@ -136,7 +142,7 @@ free_pens (
    {
       if (GfxBase->LibNode.lib_Version >= 39L)
       {
-         if (game_pens[i] != NOPEN)
+         if (game_pens[i] != -1)
             ReleasePen (scr->ViewPort.ColorMap, game_pens[i]);
       }
    }
@@ -170,11 +176,16 @@ layout_display (
       
       if (*rom_font)
       {
+         window_extent (scr, NOVICE_LEVEL, ROMFONT_WIDTH, ROMFONT_HEIGHT,
+                        &zoom_bounds[2], &zoom_bounds[3]);
          window_extent (scr, EXPERT_LEVEL, ROMFONT_WIDTH, ROMFONT_HEIGHT,
                         &used_w, &used_h);
       }
       else
       {
+         window_extent (scr, NOVICE_LEVEL, GfxBase->DefaultFont->tf_XSize,
+                        GfxBase->DefaultFont->tf_YSize,
+                        &zoom_bounds[2], &zoom_bounds[3]);
          window_extent (scr, EXPERT_LEVEL, GfxBase->DefaultFont->tf_XSize,
                         GfxBase->DefaultFont->tf_YSize, &used_w, &used_h);
       }

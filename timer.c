@@ -3,16 +3,17 @@
  * =======
  * Implementation of a timer.
  *
- * Copyright © 1994 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright © 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
  */
 
 #include <exec/memory.h>
+#include <proto/exec.h>
 #include <devices/timer.h>
+
 #include "timer.h"
 
-#include <clib/exec_protos.h>
 
-
+/* Timer data */
 struct timer
 {
    struct MsgPort      *mp;
@@ -21,7 +22,8 @@ struct timer
 };
 
 
-timer_ptr
+/* Creates a new timer object */
+timer_ptr             /* created timer */
 timer_create (void)
 {
    timer_ptr   timer;
@@ -51,9 +53,11 @@ timer_create (void)
    return NULL;
 }
 
+
+/* Frees a timer object */
 void
-timer_destroy (
-   timer_ptr   timer)
+timer_free (
+   timer_ptr   timer)   /* timer to free */
 {
    if (timer)
    {
@@ -65,20 +69,23 @@ timer_destroy (
    }
 }
 
-ULONG
+
+/* Calculates the signal of a timer */
+__inline ULONG          /* calculated signal */
 timer_signal (
-   timer_ptr   timer)
+   timer_ptr   timer)   /* timer to calculate signal for */
 {
    return (ULONG)(1L << timer->mp->mp_SigBit);
 }
 
+
+/* Starts a timer */
 void
 timer_start (
-   timer_ptr   timer,
-   ULONG       secs,
-   ULONG       micro)
+   timer_ptr   timer,   /* timer to start */
+   ULONG       secs,    /* number of seconds timer will count */
+   ULONG       micro)   /* number of microseconds the timer will count */
 {
-   timer_stop (timer);
    timer->io->tr_node.io_Command = TR_ADDREQUEST;
    timer->io->tr_time.tv_secs = secs;
    timer->io->tr_time.tv_micro = micro;
@@ -86,24 +93,26 @@ timer_start (
    timer->used = TRUE;
 }
 
+
+/* Replies a timer */
 void
-timer_continue (
-   timer_ptr   timer,
-   ULONG       secs,
-   ULONG       micro)
+timer_reply (
+   timer_ptr   timer)   /* timer to reply */
 {
    while (GetMsg (timer->mp))
       ;
-   timer_start (timer, secs, micro);
 }
 
+
+/* Stops a timer */
 void
 timer_stop (
-   timer_ptr   timer)
+   timer_ptr   timer)   /* timer to stop */
 {
    if (timer->used)
    {
       AbortIO ((struct IORequest *)timer->io);
       WaitIO ((struct IORequest *)timer->io);
+      SetSignal (0L, timer_signal (timer));
    }
 }

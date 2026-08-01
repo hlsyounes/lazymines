@@ -4,14 +4,16 @@
  * Handles localization of application.
  */
 
-#include <exec/types.h>
 #include <exec/memory.h>
+#include <exec/types.h>
+#include <proto/exec.h>
+#include <libraries/gadtools.h>
+#include <proto/gadtools.h>
+#include <intuition/intuition.h>
 #include <libraries/locale.h>
-#include "localize.h"
+#include <proto/locale.h>
 
-#include <clib/exec_protos.h>
-#include <clib/gadtools_protos.h>
-#include <clib/locale_protos.h>
+#include "localize.h"
 
 
 struct Library   *LocaleBase = NULL;
@@ -27,13 +29,15 @@ GetString (
 
 void
 init_locale (
-   char  *catalog)
+   char   *catalog,
+   ULONG   version)
 {
    li.li_LocaleBase = NULL;
    if (LocaleBase = OpenLibrary ("locale.library", 38L))
    {
       li.li_LocaleBase = LocaleBase;
-      li.li_Catalog = OpenCatalogA (NULL, catalog, NULL);
+      li.li_Catalog = OpenCatalog (NULL, catalog,
+                                   OC_Version, version, TAG_DONE);
    }
 }
 
