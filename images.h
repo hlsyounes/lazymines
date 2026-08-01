@@ -1,0 +1,19 @@
+#include <exec/types.h>
+#include <intuition/intuition.h>
+
+chip UWORD flagData[] = {
+   0x0000, 0x1800, 0x1E00, 0x1F00, 0x0000, 0x1000, 0x7400, 0xFA00,
+   0x2000, 0x3800, 0x3E00, 0x3F00, 0x2000, 0x2000, 0x0000, 0x0000
+};
+
+struct Image flagImage = {
+   0, 0, 8, 8, 2, flagData, 3, 0, NULL
+};
+
+chip UWORD mineData[] = {
+   0x0000, 0x1000, 0x3C00, 0x6F00, 0xFE00, 0x3C00, 0x0800, 0x0000
+};
+
+struct Image mineImage = {
+   0, 0, 8, 8, 1, mineData, 1, 0, NULL
+};

@@ -1,0 +1,11 @@
+CFLAGS = math=ffp
+OBJS = draw.o field.o Minesweeper.o
+
+LazyMines: $(OBJS)
+   slink FROM LIB:c.o $(OBJS) TO LazyMines \
+         LIB LIB:scmffp.lib LIB:sc.lib LIB:amiga.lib
+
+
+Minesweeper.o: Minesweeper.c field.h
+draw.o:        draw.c globals.h images.h
+field.o:       field.c field.h globals.h
