@@ -1,12 +1,13 @@
-#ifndef TOOLTYPES_H
-#define TOOLTYPES_H
 /*
  * tooltypes.h
  * ===========
  * Handles tooltypes.
  *
- * Copyright (C) 1994 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
+
+#ifndef TOOLTYPES_H
+#define TOOLTYPES_H
 
 #include <exec/types.h>
 
@@ -41,4 +42,4 @@ handle_startup_msg (
    char **args,
    BOOL   from_wb);
 
-#endif
+#endif /* TOOLTYPES_H */

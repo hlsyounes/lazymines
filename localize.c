@@ -2,6 +2,8 @@
  * localize.c
  * ==========
  * Handles localization of application.
+ *
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
 
 #include <exec/memory.h>

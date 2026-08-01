@@ -2,6 +2,8 @@
  * layout.c
  * ========
  * Handles layout of display.
+ *
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
 
 #include <exec/types.h>
@@ -37,7 +39,7 @@ UBYTE   cell_w, cell_h;
 BOOL    digital_display;
 BOOL    display_colors = TRUE;
 
-WORD    game_pens[NUM_GAMEPENS];
+LONG    game_pens[NUM_GAMEPENS];
 UWORD  *gui_pens;
 
 static ULONG   game_colors[NUM_GAMEPENS][3] = {
@@ -119,7 +121,7 @@ init_pens (
                                        game_colors[i][0],
                                        game_colors[i][1],
                                        game_colors[i][2],
-                                       OBP_Precision, PRECISION_GUI,
+                                       OBP_Precision, PRECISION_IMAGE,
                                        TAG_DONE);
          if (game_pens[i] == gui_pens[BACKGROUNDPEN])
          {

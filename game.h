@@ -1,11 +1,13 @@
-#ifndef GAME_H
-#define GAME_H
-
 /*
  * game.h
  * ======
  * Interface to game module.
+ *
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
+
+#ifndef GAME_H
+#define GAME_H
 
 #include <exec/types.h>
 #include "counter.h"
@@ -38,7 +40,7 @@ extern UBYTE          current_level;
 #define SWEEP_ALL    0
 #define SWEEP_PATH   1
 
-extern UBYTE   task;
+extern UBYTE   chosen_task;
 
 #define MIN_OPENING   0
 #define MAX_OPENING   10

@@ -1,3 +1,11 @@
+/*
+ * button.h
+ * ========
+ * The smiley button.
+ *
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
+ */
+
 #include <exec/types.h>
 #include <graphics/rastport.h>
 #include <intuition/intuition.h>

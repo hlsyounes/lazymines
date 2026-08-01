@@ -1,3 +1,11 @@
+/*
+ * lazymines.c
+ * ===========
+ * Main module.
+ *
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,12 +37,12 @@
 
 
 #define PRG_NAME        "LazyMines"
-#define VERSION_NO      "3.0"
-#define CREATION_YEAR   "1994-1995"
-#define AUTHOR          "Lorens Younes"
-#define EMAIL           "d93-hyo@nada.kth.se"
+#define VERSION_NO      "3.2"
+#define CREATION_YEAR   "1994-1998"
+#define AUTHOR          "Håkan L. Younes"
+#define EMAIL           "lorens@hem.passagen.se"
 
-STRPTR version = "$VER: LazyMines 3.0 (23.5.95)";
+static char   version[] = "$VER: LazyMines 3.2 (15.12.98)";
 
 
 void event_loop (void);
@@ -52,7 +60,7 @@ void finalize_display (void);
 
 struct IntuitionBase  *IntuitionBase = NULL;
 struct GfxBase        *GfxBase = NULL;
-struct Library        *GadToolsBase = NULL;
+struct Library        *GadToolsBase = NULL, *UtilityBase = NULL;
 
 struct TextAttr   topaz8 = {
    "topaz.font", 8, 0, FPF_ROMFONT
@@ -75,10 +83,10 @@ struct NewMenu new_menu[] = {
    {  NM_ITEM, (STRPTR)MSG_SETTINGS_TASK, 0, 0, 0, 0 },
    {   NM_SUB, (STRPTR)MSG_SETTINGS_TASK_ALL, 0, CHECKIT, ~0x01, 0 },
    {   NM_SUB, (STRPTR)MSG_SETTINGS_TASK_PATH, 0, CHECKIT, ~0x02, 0 },
-   {  NM_ITEM, (STRPTR)MSG_SETTINGS_AUTOOPEN, 0, CHECKIT, 0, 0 },
-   {  NM_ITEM, NM_BARLABEL, 0, 0, 0, 0 },
    {  NM_ITEM, (STRPTR)MSG_SETTINGS_WARNINGS, 0, CHECKIT | MENUTOGGLE, 0, 0 },
    {  NM_ITEM, (STRPTR)MSG_SETTINGS_NOCOLORS, 0, CHECKIT | MENUTOGGLE, 0, 0 },
+   {  NM_ITEM, NM_BARLABEL, 0, 0, 0, 0 },
+   {  NM_ITEM, (STRPTR)MSG_SETTINGS_AUTOOPEN, 0, CHECKIT, 0, 0 },
    {  NM_ITEM, NM_BARLABEL, 0, 0, 0, 0 },
    {  NM_ITEM, (STRPTR)MSG_SETTINGS_SAVE, 0, 0, 0, 0 },
    { NM_END,   NULL, 0, 0, 0, 0 }
@@ -94,9 +102,9 @@ struct NewMenu new_menu[] = {
 #define ITEM_Quit       10
 #define MENU_Settings       1
 #define ITEM_Task           0
-#define ITEM_AutoOpen       1
-#define ITEM_Warnings       3
-#define ITEM_NoColors       4
+#define ITEM_Warnings       1
+#define ITEM_NoColors       2
+#define ITEM_AutoOpen       4
 #define ITEM_SaveSettings   6
 
 char   pubscr_name[129];
@@ -122,7 +130,7 @@ struct level   levels[] = {
 };
 
 UBYTE   current_level = EXPERT_LEVEL;
-UBYTE   task, chosen_task = SWEEP_ALL;
+UBYTE   chosen_task = SWEEP_ALL;
 UBYTE   auto_opening = MIN_OPENING;
 BOOL    place_warnings = FALSE;
 
@@ -158,6 +166,8 @@ main (
    else
       new_menu[ITEM_Novice + current_level].nm_Flags |= CHECKED;
    new_menu[ITEM_Quit + ITEM_Task + 4 + chosen_task].nm_Flags |= CHECKED;
+   if (chosen_task == SWEEP_PATH)
+      new_menu[ITEM_Quit + ITEM_AutoOpen + 5].nm_Flags |= NM_ITEMDISABLED;
    if (auto_opening > 0)
       new_menu[ITEM_Quit + ITEM_AutoOpen + 5].nm_Flags |= CHECKED;
    if (place_warnings)
@@ -509,7 +519,7 @@ process_menus (
                while (!new_game (OPTIONAL_LEVEL));
                break;
             case ITEM_High:
-               display_high_scores ();
+               display_high_scores (0);
                break;
             case ITEM_About:
                sprintf (buf, localized_string (MSG_ABOUT_REQMSG),
@@ -527,7 +537,26 @@ process_menus (
             {
             case ITEM_Task:
                if (sub_no != MENUNULL)
+               {
                   chosen_task = sub_no;
+                  if (chosen_task == SWEEP_ALL)
+                  {
+                     OnMenu (main_win,
+                             FULLMENUNUM (MENU_Settings,
+                                          ITEM_AutoOpen, NOSUB));
+                  }
+                  else
+                  {
+                     OffMenu (main_win,
+                              FULLMENUNUM (MENU_Settings,
+                                           ITEM_AutoOpen, NOSUB));
+                  }
+                  while (!new_game (current_level))
+                  {
+                     if (current_level == OPTIONAL_LEVEL)
+                        request_optional_size (main_win);
+                  }
+               }
                break;
             case ITEM_AutoOpen:
                request_autoopening (main_win);
@@ -581,13 +610,13 @@ void
 win_game (void)
 {
    extern UBYTE   happy_data[];
-   
+   UBYTE   hi_pos;
    SetAttrs (face_image, IA_Data, happy_data, TAG_DONE);
    button_render ();
    field_win (field);
    if (current_level != OPTIONAL_LEVEL)
-      if (update_high_score (counter_value (time_counter)))
-         display_high_scores ();
+      if (hi_pos = update_high_score (counter_value (time_counter)))
+         display_high_scores (hi_pos);
 }
 
 void
@@ -614,7 +643,6 @@ new_game (
    
    if (!playing)
       SetAttrs (face_image, IA_Data, calm_data, TAG_DONE);
-   task = chosen_task;
    if (level != current_level || level == OPTIONAL_LEVEL)
    {
       UWORD   win_w, win_h;
@@ -701,11 +729,12 @@ new_game (
       
       field_size (field, levels[level].rows, levels[level].columns,
                   levels[level].rows * levels[level].columns *
-                  levels[level].bombs / ((task == SWEEP_ALL) ? 160 : 100));
+                  levels[level].bombs /
+                  ((chosen_task == SWEEP_ALL) ? 160 : 100));
       counter_update (flag_counter,
                       levels[level].rows * levels[level].columns *
                       levels[level].bombs /
-                      ((task == SWEEP_ALL) ? 160 : 100));
+                      ((chosen_task == SWEEP_ALL) ? 160 : 100));
    }
    playing = TRUE;
    if (time_on)
@@ -732,7 +761,12 @@ initialize (void)
       if (GfxBase = (struct GfxBase *)OpenLibrary ("graphics.library", 37L))
       {
          if (GadToolsBase = OpenLibrary ("gadtools.library", 37L))
-            return init_display ();
+         {
+            if (UtilityBase = OpenLibrary ("utility.library", 37L))
+               return init_display ();
+            else
+               error_requester (NULL, MSG_OPEN_ERROR, "utility.library");
+         }
          else
             error_requester (NULL, MSG_OPEN_ERROR, "gadtools.library");
       }
@@ -864,7 +898,6 @@ init_display (void)
                                                   main_win->BorderTop +
                                                   LINEHEIGHT + INTERHEIGHT,
                                                   0, TRUE);
-                        
                         btn_w = main_win->Width -
                                 main_win->BorderLeft - main_win->BorderRight -
                                 2 * counter_width () - 3 * INTERWIDTH -
@@ -985,6 +1018,7 @@ void
 finalize (void)
 {
    finalize_display ();
+   CloseLibrary (UtilityBase);
    CloseLibrary (GadToolsBase);
    CloseLibrary ((struct Library *)GfxBase);
    CloseLibrary ((struct Library *)IntuitionBase);

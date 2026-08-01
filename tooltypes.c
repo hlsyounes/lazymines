@@ -3,7 +3,7 @@
  * ===========
  * Handles tooltypes.
  *
- * Copyright (C) 1994 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
 
 #include <stdio.h>

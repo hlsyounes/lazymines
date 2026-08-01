@@ -3,7 +3,7 @@
  * =======
  * Implementation of a timer.
  *
- * Copyright © 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
 
 #include <exec/memory.h>
@@ -71,7 +71,7 @@ timer_free (
 
 
 /* Calculates the signal of a timer */
-__inline ULONG          /* calculated signal */
+ULONG          /* calculated signal */
 timer_signal (
    timer_ptr   timer)   /* timer to calculate signal for */
 {

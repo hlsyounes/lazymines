@@ -1,12 +1,13 @@
-#ifndef TIMER_H
-#define TIMER_H
 /*
  * timer.h
  * =======
  * Interface to timer.
  *
- * Copyright © 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
+
+#ifndef TIMER_H
+#define TIMER_H
 
 #include <exec/types.h>
 
@@ -46,4 +47,4 @@ void
 timer_stop (
    timer_ptr   timer);   /* timer to stop */
 
-#endif
+#endif /* TIMER_H */

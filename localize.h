@@ -1,12 +1,13 @@
-#ifndef LOCALIZE_H
-#define LOCALIZE_H
 /*
  * localize.h
  * ==========
  * Functions for localization.
  *
- * Copyright © 1994 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
+
+#ifndef LOCALIZE_H
+#define LOCALIZE_H
 
 #include <exec/types.h>
 #include <libraries/gadtools.h>
@@ -34,4 +35,4 @@ CreateLocMenus (
    ULONG            tag,
    ...);
 
-#endif
+#endif /* LOCALIZE_H */

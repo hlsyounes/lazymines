@@ -3,7 +3,7 @@
  * =======
  * Implements the minefield.
  *
- * Copyright © 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
 
 #include <math.h>
@@ -597,7 +597,7 @@ field_free (
 }
 
 
-__inline WORD
+WORD
 field_left (
    field_ptr   field)
 {
@@ -605,7 +605,7 @@ field_left (
 }
 
 
-__inline WORD
+WORD
 field_top (
    field_ptr   field)
 {
@@ -643,7 +643,7 @@ field_size (
 }
 
 
-__inline BOOL
+BOOL
 field_inside (
    field_ptr   field,
    WORD        row,
@@ -673,7 +673,7 @@ field_reset (
    memset (field->data, 0,
            field->rows * field->columns * sizeof (*field->data));
    
-   if (task == SWEEP_PATH && !generate_path (field))
+   if (chosen_task == SWEEP_PATH && !generate_path (field))
       return FALSE;
    
    SetAPen (field->rp, gui_pens[BACKGROUNDPEN]);
@@ -696,7 +696,7 @@ field_reset (
       r = drand48 () * field->rows;
       c = drand48 () * field->columns;
       if (!(IS_MINE (field, r, c) ||
-            (IS_PATH (field, r, c) && task == SWEEP_PATH)))
+            (IS_PATH (field, r, c) && chosen_task == SWEEP_PATH)))
       {
          SET_FIELD (field, r, c, MINE);
          --n;
@@ -729,14 +729,14 @@ field_reset (
       }
    }
    
-   if (auto_opening > 0 && task == SWEEP_ALL)
+   if (auto_opening > 0 && chosen_task == SWEEP_ALL)
       generate_opening (field);
-   else if (task == SWEEP_PATH)
+   else if (chosen_task == SWEEP_PATH)
    {
       avoid_trivial (field);
-      task = SWEEP_ALL;
+      chosen_task = SWEEP_ALL;
       reveal_this (field, 0, 0);
-      task = SWEEP_PATH;
+      chosen_task = SWEEP_PATH;
       time_on = TRUE;
       timer_start (timer_obj, 0L, 1000000L);
    }
@@ -784,7 +784,7 @@ reveal_this (
    UBYTE       col)
 {
    if (IS_SWEEPABLE (field, row, col) &&
-       (task == SWEEP_ALL || count_neighbors (field, row, col, SWEPT)))
+       (chosen_task == SWEEP_ALL || count_neighbors (field, row, col, SWEPT)))
    {
       SWEEP_CELL (field, row, col);
       draw_cell (field->rp, field->left + LINEWIDTH + col * cell_w,
@@ -907,7 +907,7 @@ press_this (
    UBYTE       col)
 {
    if (IS_SWEEPABLE (field, row, col) &&
-       (task == SWEEP_ALL || count_neighbors (field, row, col, SWEPT)))
+       (chosen_task == SWEEP_ALL || count_neighbors (field, row, col, SWEPT)))
    {
       draw_box (field->rp, field->left + LINEWIDTH + col * cell_w,
                 field->top + LINEHEIGHT + row * cell_h,
@@ -965,14 +965,14 @@ release_around (
 }
 
 
-__inline BOOL
+BOOL
 field_swept (
    field_ptr   field)
 {
-   return (BOOL)((task == SWEEP_ALL &&
+   return (BOOL)((chosen_task == SWEEP_ALL &&
                   field->rows * field->columns - field->mines ==
                   field->swept) ||
-                 (task == SWEEP_PATH &&
+                 (chosen_task == SWEEP_PATH &&
                   IS_SWEPT (field, field->rows - 1, field->columns - 1)));
 }
 

@@ -1,12 +1,12 @@
-#ifndef HIGHSCORES_H
-#define HIGHSCORES_H
-
 /* highscores.h
  * ============
  * Interface to highscore handling.
  *
- * Copyright © 1994 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
+
+#ifndef HIGHSCORES_H
+#define HIGHSCORES_H
 
 #include <exec/types.h>
 
@@ -18,11 +18,12 @@ load_high_scores (
 void
 save_high_scores (void);
 
-BOOL
+UBYTE
 update_high_score (
    UWORD   score);
 
 void
-display_high_scores (void);
+display_high_scores (
+   UBYTE   highlight_no);
 
-#endif
+#endif /* HIGHSCORES_H */

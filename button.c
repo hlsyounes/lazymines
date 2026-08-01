@@ -1,3 +1,11 @@
+/*
+ * button.c
+ * ========
+ * The smiley button.
+ *
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
+ */
+
 #include <clib/alib_protos.h>
 #include <proto/graphics.h>
 #include <intuition/imageclass.h>
@@ -15,7 +23,7 @@ static BOOL             highlighted, used = FALSE;
 
 
 static void
-draw_box (
+button_box (
    struct RastPort  *rp,
    WORD              left,
    WORD              top,
@@ -45,8 +53,8 @@ button_inside (
    WORD   x,
    WORD   y)
 {
-   return (BOOL)(used && x >= left && x < left + width &&
-                         y >= top && y < top + height);
+   return (BOOL)(x >= left && x < left + width &&
+                 y >= top && y < top + height);
 }
 
 
@@ -79,28 +87,34 @@ button_changebox (
    UWORD   w,
    UWORD   h)
 {
-   SetAPen (btn_rp, gui_pens[BACKGROUNDPEN]);
-   RectFill (btn_rp, left, top, left + width - 1, top + height - 1);
-   
-   left = x;
-   top = y;
-   width = w;
-   height = h;
-   button_render ();
+   if (used)
+   {
+      SetAPen (btn_rp, gui_pens[BACKGROUNDPEN]);
+      RectFill (btn_rp, left, top, left + width - 1, top + height - 1);
+      
+      left = x;
+      top = y;
+      width = w;
+      height = h;
+      button_render ();
+   }
 }
 
 
 void
 button_render (void)
 {
-   draw_box (btn_rp,
-             left, top, width, height,
-             highlighted);
-   
-   DoMethod ((Object *)image, IM_DRAWFRAME, btn_rp, (left << 16) + top,
-             ((highlighted) ? IDS_SELECTED : IDS_NORMAL), NULL,
-             (width - 2 * LINEWIDTH - INTERWIDTH << 16) +
-             height - 2 * LINEHEIGHT - INTERHEIGHT);
+   if (used)
+   {
+      button_box (btn_rp,
+                  left, top, width, height,
+                  highlighted);
+      
+      DoMethod ((Object *)image, IM_DRAWFRAME, btn_rp, (left << 16) + top,
+                ((highlighted) ? IDS_SELECTED : IDS_NORMAL), NULL,
+                (width - 2 * LINEWIDTH - INTERWIDTH << 16) +
+                height - 2 * LINEHEIGHT - INTERHEIGHT);
+   }
 }
 
 
@@ -109,7 +123,7 @@ button_hit (
    WORD   x,
    WORD   y)
 {
-   if (button_inside (x, y))
+   if (used && button_inside (x, y))
    {
       highlighted = TRUE;
       button_render ();
@@ -126,18 +140,21 @@ button_pressed (
    WORD   x,
    WORD   y)
 {
-   if (button_inside (x, y))
+   if (used)
    {
-      if (!highlighted)
+      if (button_inside (x, y))
       {
-         highlighted = TRUE;
+         if (!highlighted)
+         {
+            highlighted = TRUE;
+            button_render ();
+         }
+      }
+      else if (highlighted)
+      {
+         highlighted = FALSE;
          button_render ();
       }
-   }
-   else if (highlighted)
-   {
-      highlighted = FALSE;
-      button_render ();
    }
 }
 
@@ -150,12 +167,15 @@ button_release (
    BOOL   retval = FALSE;
    
    
-   button_pressed (x, y);
-   if (highlighted)
+   if (used)
    {
-      retval = TRUE;
-      highlighted = FALSE;
-      button_render ();
+      button_pressed (x, y);
+      if (highlighted)
+      {
+         retval = TRUE;
+         highlighted = FALSE;
+         button_render ();
+      }
    }
    
    return retval;

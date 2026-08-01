@@ -3,7 +3,7 @@
  * ========
  * Definition and initialization of game images.
  *
- * Copyright © 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
 
 #include <exec/types.h>
@@ -11,7 +11,7 @@
 #include <proto/graphics.h>
 #include <proto/intuition.h>
 
-#include <chunkyiclass.h>
+#include "chunkyiclass.h"
 
 #include "display_globals.h"
 #include "layout.h"
@@ -61,7 +61,7 @@ static UBYTE   mine_data[] = {
    0,0,0,0,0,0,0,0
 };
 
-UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4] = {
+UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4 + 1] = {
    { 0,DIGITWIDTH, 0,DIGITHEIGHT,
      0,0,4,4,4,4,4,4,4,4,4,0,0,
      4,0,0,4,4,4,4,4,4,4,0,0,4,
@@ -83,7 +83,7 @@ UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4] = {
      4,4,4,0,0,0,0,0,0,0,4,4,4,
      4,4,0,0,4,4,4,4,4,0,0,4,4,
      4,0,0,4,4,4,4,4,4,4,0,0,4,
-     0,0,4,4,4,4,4,4,4,4,4,0,0
+     0,0,4,4,4,4,4,4,4,4,4,0,0, 0
    },
    { 0,DIGITWIDTH, 0,DIGITHEIGHT,
      0,0,5,5,5,5,5,5,5,5,5,0,0,
@@ -106,7 +106,7 @@ UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4] = {
      5,5,5,0,0,0,0,0,0,0,4,4,4,
      5,5,0,0,5,5,5,5,5,0,0,4,4,
      5,0,0,5,5,5,5,5,5,5,0,0,4,
-     0,0,5,5,5,5,5,5,5,5,5,0,0
+     0,0,5,5,5,5,5,5,5,5,5,0,0, 0
    },
    { 0,DIGITWIDTH, 0,DIGITHEIGHT,
      0,0,4,4,4,4,4,4,4,4,4,0,0,
@@ -129,7 +129,7 @@ UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4] = {
      4,4,4,0,0,0,0,0,0,0,5,5,5,
      4,4,0,0,4,4,4,4,4,0,0,5,5,
      4,0,0,4,4,4,4,4,4,4,0,0,5,
-     0,0,4,4,4,4,4,4,4,4,4,0,0
+     0,0,4,4,4,4,4,4,4,4,4,0,0, 0
    },
    { 0,DIGITWIDTH, 0,DIGITHEIGHT,
      0,0,4,4,4,4,4,4,4,4,4,0,0,
@@ -152,7 +152,7 @@ UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4] = {
      5,5,5,0,0,0,0,0,0,0,4,4,4,
      5,5,0,0,4,4,4,4,4,0,0,4,4,
      5,0,0,4,4,4,4,4,4,4,0,0,4,
-     0,0,4,4,4,4,4,4,4,4,4,0,0,
+     0,0,4,4,4,4,4,4,4,4,4,0,0, 0
    },
    { 0,DIGITWIDTH, 0,DIGITHEIGHT,
      0,0,5,5,5,5,5,5,5,5,5,0,0,
@@ -175,7 +175,7 @@ UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4] = {
      5,5,5,0,0,0,0,0,0,0,4,4,4,
      5,5,0,0,5,5,5,5,5,0,0,4,4,
      5,0,0,5,5,5,5,5,5,5,0,0,4,
-     0,0,5,5,5,5,5,5,5,5,5,0,0
+     0,0,5,5,5,5,5,5,5,5,5,0,0, 0
    },
    { 0,DIGITWIDTH, 0,DIGITHEIGHT,
      0,0,4,4,4,4,4,4,4,4,4,0,0,
@@ -198,7 +198,7 @@ UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4] = {
      5,5,5,0,0,0,0,0,0,0,4,4,4,
      5,5,0,0,4,4,4,4,4,0,0,4,4,
      5,0,0,4,4,4,4,4,4,4,0,0,4,
-     0,0,4,4,4,4,4,4,4,4,4,0,0
+     0,0,4,4,4,4,4,4,4,4,4,0,0, 0
    },
    { 0,DIGITWIDTH, 0,DIGITHEIGHT,
      0,0,4,4,4,4,4,4,4,4,4,0,0,
@@ -221,7 +221,7 @@ UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4] = {
      4,4,4,0,0,0,0,0,0,0,4,4,4,
      4,4,0,0,4,4,4,4,4,0,0,4,4,
      4,0,0,4,4,4,4,4,4,4,0,0,4,
-     0,0,4,4,4,4,4,4,4,4,4,0,0
+     0,0,4,4,4,4,4,4,4,4,4,0,0, 0
    },
    { 0,DIGITWIDTH, 0,DIGITHEIGHT,
      0,0,4,4,4,4,4,4,4,4,4,0,0,
@@ -244,7 +244,7 @@ UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4] = {
      5,5,5,0,0,0,0,0,0,0,4,4,4,
      5,5,0,0,5,5,5,5,5,0,0,4,4,
      5,0,0,5,5,5,5,5,5,5,0,0,4,
-     0,0,5,5,5,5,5,5,5,5,5,0,0
+     0,0,5,5,5,5,5,5,5,5,5,0,0, 0
    },
    { 0,DIGITWIDTH, 0,DIGITHEIGHT,
      0,0,4,4,4,4,4,4,4,4,4,0,0,
@@ -267,7 +267,7 @@ UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4] = {
      4,4,4,0,0,0,0,0,0,0,4,4,4,
      4,4,0,0,4,4,4,4,4,0,0,4,4,
      4,0,0,4,4,4,4,4,4,4,0,0,4,
-     0,0,4,4,4,4,4,4,4,4,4,0,0
+     0,0,4,4,4,4,4,4,4,4,4,0,0, 0
    },
    { 0,DIGITWIDTH, 0,DIGITHEIGHT,
      0,0,4,4,4,4,4,4,4,4,4,0,0,
@@ -290,7 +290,7 @@ UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4] = {
      5,5,5,0,0,0,0,0,0,0,4,4,4,
      5,5,0,0,4,4,4,4,4,0,0,4,4,
      5,0,0,4,4,4,4,4,4,4,0,0,4,
-     0,0,4,4,4,4,4,4,4,4,4,0,0
+     0,0,4,4,4,4,4,4,4,4,4,0,0, 0
    },
    { 0,DIGITWIDTH, 0,DIGITHEIGHT,
      0,0,5,5,5,5,5,5,5,5,5,0,0,
@@ -313,7 +313,7 @@ UBYTE   digit_data[NUM_DIGITS][DIGITWIDTH * DIGITHEIGHT + 4] = {
      5,5,5,0,0,0,0,0,0,0,5,5,5,
      5,5,0,0,5,5,5,5,5,0,0,5,5,
      5,0,0,5,5,5,5,5,5,5,0,0,5,
-     0,0,5,5,5,5,5,5,5,5,5,0,0
+     0,0,5,5,5,5,5,5,5,5,5,0,0, 0
    }
 };
 
@@ -503,7 +503,6 @@ init_images (
    def_pens[5] = gui_pens[SHINEPEN];
    if (def_pens[5] == def_pens[0])
       def_pens[5] = gui_pens[BACKGROUNDPEN];
-   def_pens[6] = real_pens[6] = (UWORD)~0;
    real_pens[6] = (palette_pens[5] == -1) ?
                   gui_pens[BACKGROUNDPEN] : palette_pens[5];
    def_pens[6] = gui_pens[BACKGROUNDPEN];

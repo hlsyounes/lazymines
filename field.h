@@ -1,12 +1,13 @@
-#ifndef FIELD_H
-#define FIELD_H
 /*
  * field.h
  * =======
  * Interface to minefield.
  *
- * Copyright © 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
+
+#ifndef FIELD_H
+#define FIELD_H
 
 #include <exec/types.h>
 #include <graphics/rastport.h>
@@ -115,4 +116,4 @@ void
 field_lose (
    field_ptr   field);
 
-#endif
+#endif /* FIELD_H */

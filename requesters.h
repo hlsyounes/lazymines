@@ -1,12 +1,13 @@
-#ifndef REQUESTERS_H
-#define REQUESTERS_H
 /*
  * requesters.h
  * ============
  * Some usefull functions for handling requesters.
  *
- * Copyright (C) 1994 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
+
+#ifndef REQUESTERS_H
+#define REQUESTERS_H
 
 #include <exec/types.h>
 #include <intuition/intuition.h>
@@ -75,4 +76,4 @@ void
 request_autoopening (
    struct Window  *win);
 
-#endif
+#endif /* REQUESTERS_H */

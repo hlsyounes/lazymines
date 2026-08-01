@@ -1,12 +1,13 @@
-#ifndef COUNTER_H
-#define COUNTER_H
 /*
  * counter.h
  * =========
  * Interface to digital counters.
  *
- * Copyright © 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
+
+#ifndef COUNTER_H
+#define COUNTER_H
 
 #include <exec/types.h>
 #include <intuition/intuition.h>
@@ -75,4 +76,4 @@ counter_update (
    counter_ptr   counter,   /* counter to update */
    UWORD         value);    /* new value */
 
-#endif
+#endif /* COUNTER_H */

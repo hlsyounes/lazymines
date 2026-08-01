@@ -1,12 +1,13 @@
-#ifndef LAYOUT_CONST_H
-#define LAYOUT_CONST_H
 /*
- * layout_const.h
- * ==============
- * Various layout constants.
+ * display_globals.h
+ * =================
+ * Various display globals.
  *
- * Copyright © 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
+
+#ifndef DISPLAY_GLOBALS_H
+#define DISPLAY_GLOBALS_H
 
 #include <libraries/gadtools.h>
 

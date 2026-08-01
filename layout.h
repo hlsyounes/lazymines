@@ -1,11 +1,13 @@
-#ifndef LAYOUT_H
-#define LAYOUT_H
-
 /*
  * layout.h
  * ========
- * 
+ * Handles layout of display.
+ *
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
+
+#ifndef LAYOUT_H
+#define LAYOUT_H
 
 #include <exec/types.h>
 
@@ -21,7 +23,7 @@ extern UWORD   zoom_bounds[];
 
 #define NUM_GAMEPENS   8
 
-extern WORD    game_pens[];
+extern LONG    game_pens[];
 
 
 void
@@ -46,4 +48,4 @@ layout_display (
    struct Screen  *scr,
    BOOL           *rom_font);
 
-#endif
+#endif /* LAYOUT_H */

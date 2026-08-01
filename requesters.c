@@ -3,7 +3,7 @@
  * ============
  * Some usefull functions for handling requesters.
  *
- * Copyright (C) 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
 
 #include <stdio.h>
@@ -107,8 +107,6 @@ string_requester (
    struct Requester    req;
    BOOL   win_sleep;
 
-   win_sleep = window_sleep (win, &req);
-   
    str_gad = CreateContext (&gad_list);
    new_gad.ng_TextAttr = win->WScreen->Font;
    new_gad.ng_VisualInfo = vis_info;
@@ -155,6 +153,8 @@ string_requester (
                                 TAG_DONE);
       if (req_win)
       {
+         win_sleep = window_sleep (win, &req);
+   
          GT_RefreshWindow (req_win, NULL);
          ActivateGadget (str_gad, req_win, NULL);
          
@@ -179,12 +179,12 @@ string_requester (
          strncpy (buffer,
                   ((struct StringInfo *)str_gad->SpecialInfo)->Buffer,
                   buf_size);
+         if (win_sleep)
+            window_wakeup (win, &req);
          CloseWindow (req_win);
       }
       FreeGadgets (gad_list);
    }
-   if (win_sleep)
-      window_wakeup (win, &req);
 }
 
 
@@ -492,7 +492,7 @@ request_optional_size (
 {
    struct RastPort   layout_rp;
    struct TextAttr   ta;
-   ULONG             box_w, box_h, win_w, win_h;
+   ULONG             box_w, box_h, win_w, win_h, temp;
    STRPTR            label;
    UWORD             max_mines;
       
@@ -554,6 +554,15 @@ request_optional_size (
            TextLength (&layout_rp, "0000", 4);
    box_h = 3 * (ta.ta_YSize + ng1.ng_Height) +
            7 * INTERHEIGHT + 2 * LINEHEIGHT;
+   label = localized_string (MSG_OPTIONAL_REQTITLE);
+   temp = TextLength (&win->WScreen->RastPort, label, strlen (label)) + 24;
+   if (temp > box_w)
+   {
+      box_w = temp;
+      ng1.ng_Width = ng2.ng_Width = ng3.ng_Width =
+                     box_w - 3 * INTERWIDTH - 2 * LINEWIDTH -
+                     TextLength (&layout_rp, "0000", 4);
+   }
    label = localized_string (MSG_OK_GAD);
    ng4.ng_TextAttr = win->WScreen->Font;
    ng4.ng_VisualInfo = ng1.ng_VisualInfo;
@@ -721,7 +730,7 @@ request_autoopening (
 {
    struct RastPort   layout_rp;
    struct TextAttr   ta;
-   ULONG             box_w, box_h, win_w, win_h;
+   ULONG             box_w, box_h, win_w, win_h, temp;
    STRPTR            label;
    
    struct NewGadget    ng1, ng2;
@@ -749,6 +758,14 @@ request_autoopening (
    box_w = ng1.ng_Width + 3 * INTERWIDTH + 2 * LINEWIDTH +
            TextLength (&layout_rp, "00%", 3);
    box_h = ta.ta_YSize + 2 * (INTERHEIGHT + LINEHEIGHT);
+   label = localized_string (MSG_AUTOOPEN_REQTITLE);
+   temp = TextLength (&win->WScreen->RastPort, label, strlen (label)) + 24;
+   if (temp > box_w)
+   {
+      box_w = temp;
+      ng1.ng_Width = box_w - 3 * INTERWIDTH - 2 * LINEWIDTH -
+                     TextLength (&layout_rp, "00%", 3);
+   }
    label = localized_string (MSG_OK_GAD);
    ng2.ng_TextAttr = win->WScreen->Font;
    ng2.ng_VisualInfo = ng1.ng_VisualInfo;

@@ -3,7 +3,7 @@
  * =========
  * Implements digital counters.
  *
- * Copyright © 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
 
 #include <stdio.h>
@@ -34,7 +34,7 @@ struct counter {
 
 
 /* Calculates the width that a digital counter will get */
-__inline UWORD         /* calculated width */
+UWORD         /* calculated width */
 counter_width (void)
 {
    return 3 * DIGITWIDTH + 6 * LINEWIDTH;
@@ -42,7 +42,7 @@ counter_width (void)
 
 
 /* Calculates the height that a digital counter will get */
-__inline UWORD          /* calculated height */
+UWORD          /* calculated height */
 counter_height (void)
 {
    return DIGITHEIGHT + 4 * LINEHEIGHT;
@@ -85,7 +85,7 @@ counter_free (
 
 
 /* Reads the value of a counter */
-__inline UWORD              /* the value */
+UWORD              /* the value */
 counter_value (
    counter_ptr   counter)   /* counter to read value from */
 {

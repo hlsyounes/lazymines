@@ -3,7 +3,7 @@
  * ============
  * Handles highscores.
  *
- * Copyright © 1994 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
 
 #include <stdlib.h>
@@ -73,7 +73,7 @@ load_high_scores (
    int    i, j, k;
    
    
-   if (fh = Open ("LazyMines.hiscore", MODE_OLDFILE))
+   if (fh = Open ("lazymines.hiscore", MODE_OLDFILE))
    {
       Read (fh, check, sizeof (HSMAGIC));
       if (!strcmp (check, HSMAGIC))
@@ -117,54 +117,57 @@ save_high_scores (void)
 }
 
 
-BOOL
+UBYTE
 update_high_score (
    UWORD   score)
 {
-   char   name[31];
-   BYTE   n = NUM_SCORES - 1;
-   BOOL   get_name = TRUE;
+   char    name[31];
+   BYTE    n = NUM_SCORES - 1;
+   UBYTE   get_name = 0;
    
    name[0] = '\0';
    
    while (n >= 0)
    {
-      if (score <= hiscores[task][current_level - 1][n].score)
+      if (score <= hiscores[chosen_task][current_level - 1][n].score)
       {
          need_save = TRUE;
          
          if (n < NUM_SCORES - 1)
          {
-            strcpy (hiscores[task][current_level - 1][n + 1].name,
-                    hiscores[task][current_level - 1][n].name);
-            hiscores[task][current_level - 1][n + 1].score =
-                                   hiscores[task][current_level - 1][n].score;
+            strcpy (hiscores[chosen_task][current_level - 1][n + 1].name,
+                    hiscores[chosen_task][current_level - 1][n].name);
+            hiscores[chosen_task][current_level - 1][n + 1].score =
+                            hiscores[chosen_task][current_level - 1][n].score;
          }
          
-         if (get_name)
+         if (get_name == 0)
          {
             string_requester (main_win, vis_info,
                               localized_string (MSG_NAME_REQTITLE),
                               localized_string (MSG_NAME_GAD),
                               name, 30);
-            get_name = FALSE;
+            get_name = n + 1;
          }
+         else
+            --get_name;
          
-         strcpy (hiscores[task][current_level - 1][n].name, name);
-         hiscores[task][current_level - 1][n].score = score;
+         strcpy (hiscores[chosen_task][current_level - 1][n].name, name);
+         hiscores[chosen_task][current_level - 1][n].score = score;
       }
       --n;
    }
    
-   return (BOOL)(!get_name);
+   return get_name;
 }
 
 
 void
-display_high_scores (void)
+display_high_scores (
+   UBYTE   highlight_no)
 {
    struct RastPort   layout_rp;
-   ULONG             box_w, box_h, win_w, win_h;
+   ULONG             box_w, box_h, win_w, win_h, temp;
    register UBYTE    n;
    char              text_buf[38], win_title[128];
    STRPTR            label;
@@ -176,9 +179,17 @@ display_high_scores (void)
    BOOL               win_sleep, done = FALSE;
    
    
+   sprintf (win_title, "%s - %s (%s)",
+            localized_string (MSG_HIGHSCORES_REQTITLE),
+            localized_string (MSG_GAME_NOVICE + current_level - 1) + 2,
+            localized_string (MSG_SETTINGS_TASK_ALL + chosen_task) + 2);
    InitRastPort (&layout_rp);
    box_w = 37 * layout_rp.TxWidth + 2 * (INTERWIDTH + LINEWIDTH);
    box_h = NUM_SCORES * layout_rp.TxHeight + 2 * (INTERHEIGHT + LINEHEIGHT);
+   temp = TextLength (&main_win->WScreen->RastPort,
+                      win_title, strlen (win_title)) + 24;
+   if (temp > box_w)
+      box_w = temp;
    
    label = localized_string (MSG_CONTINUE_GAD);
    ng.ng_TextAttr = main_win->WScreen->Font;
@@ -203,10 +214,6 @@ display_high_scores (void)
    
    if (ok_gad)
    {
-      sprintf (win_title, "%s - %s (%s)",
-               localized_string (MSG_HIGHSCORES_REQTITLE),
-               localized_string (MSG_GAME_NOVICE + current_level - 1) + 2,
-               localized_string (MSG_SETTINGS_TASK_ALL + task) + 2);
       req_win = OpenWindowTags (NULL,
                                 WA_Left, main_win->LeftEdge +
                                          (main_win->Width - win_w) / 2,
@@ -249,16 +256,25 @@ display_high_scores (void)
          RefreshGList (gad_list, req_win, NULL, -1);
          GT_RefreshWindow (req_win, NULL);
          
-         SetAPen (req_win->RPort, gui_pens[TEXTPEN]);
          for (n = 0; n < NUM_SCORES; ++n)
          {
+            SetAPen (req_win->RPort,
+                     gui_pens[((n + 1 == highlight_no) ? HIGHLIGHTTEXTPEN :
+                                                         TEXTPEN)]);
             Move (req_win->RPort,
                   req_win->BorderLeft + 2 * INTERWIDTH + LINEWIDTH,
                   req_win->BorderTop + 2 * INTERHEIGHT + LINEHEIGHT +
                   n * req_win->RPort->TxHeight + req_win->RPort->TxBaseline);
-            sprintf (text_buf, "%2d %-30s %3d", n + 1,
-                     hiscores[task][current_level - 1][n].name,
-                     hiscores[task][current_level - 1][n].score);
+            sprintf (text_buf, "%2d %s", n + 1,
+                     hiscores[chosen_task][current_level - 1][n].name);
+            Text (req_win->RPort, text_buf, strlen (text_buf));
+            Move (req_win->RPort,
+                  req_win->BorderLeft + box_w -
+                  LINEWIDTH - 3 * req_win->RPort->TxWidth,
+                  req_win->BorderTop + 2 * INTERHEIGHT + LINEHEIGHT +
+                  n * req_win->RPort->TxHeight + req_win->RPort->TxBaseline);
+            sprintf (text_buf, "%3d",
+                     hiscores[chosen_task][current_level - 1][n].score);
             Text (req_win->RPort, text_buf, strlen (text_buf));
          }
          

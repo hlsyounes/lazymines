@@ -3,7 +3,7 @@
  * ===============
  * Converts pre 3.0 to 3.0 highscorefile.
  *
- * Copyright © 1995 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1995-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
 
 #include <stdlib.h>

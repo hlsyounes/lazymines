@@ -1,12 +1,13 @@
-#ifndef IMAGES_H
-#define IMAGES_H
 /*
  * images.h
  * ========
  * The game images.
  *
- * Copyright © 1994-1995 Lorens Younes (d93-hyo@nada.kth.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
+
+#ifndef IMAGES_H
+#define IMAGES_H
 
 #include <exec/types.h>
 #include <intuition/intuition.h>
@@ -43,4 +44,4 @@ void
 free_images (
    struct Screen  *scr);   /* screen that images were used on */
 
-#endif
+#endif /* IMAGES_H */
