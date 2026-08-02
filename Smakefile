@@ -1,4 +1,5 @@
 .ct.catalog:
+   -makedir $*
    CatComp Catalogs/lazymines.cd $< CATALOG $@
 
 CFLAGS = math=ffp
@@ -38,3 +39,7 @@ localize.h: strings.o
 
 strings.o: Catalogs/lazymines.cd
    CatComp $< CFILE strings.h OBJFILE $@
+
+
+clean:
+   -delete ALL \#?.o strings.h LazyMines Catalogs/~(\#?.\#?) lazymines.hiscore

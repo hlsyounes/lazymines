@@ -1,0 +1,5 @@
+*.o
+strings.h
+LazyMines
+Catalogs/*/
+lazymines.hiscore
