@@ -160,8 +160,7 @@
 
 (if (= how-install 0)
     ((install-program)
-     (install-icons)
-     (run (cat "convscorefile \"" prog-dest "\"")))
+     (install-icons))
     (set @default-dest ""))
 
 (if (= (exists "LOCALE:") 0)

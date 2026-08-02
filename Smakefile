@@ -19,7 +19,6 @@ OBJS = lazymines.o button.o counter.o field.o highscores.o images.o layout.o \
 
 all: util \
      lazymines \
-     convscorefile \
      catalogs/dansk/lazymines.catalog \
      catalogs/deutsch/lazymines.catalog \
      catalogs/italiano/lazymines.catalog \
@@ -36,9 +35,6 @@ lazymines: $(OBJS)
 	lib LIB:scmffp.lib LIB:sc.lib LIB:amiga.lib chunkyiclass.lib \
 	    util/util.lib \
 	batch noicons stripdebug define @__chkaborts=@__dummy
-
-convscorefile: convscorefile.c
-	$(CC) $(CFLAGS) link $<
 
 catalogs/dansk/lazymines.catalog: catalogs/dansk.ct
 catalogs/deutsch/lazymines.catalog: catalogs/deutsch.ct
@@ -76,7 +72,7 @@ strings.o: catalogs/lazymines.cd
 clean: FORCE
 	execute scripts/runsmake util clean
 	-delete ALL \#?.o \#?.lnk strings.h lazymines catalogs/~(\#?.\#?) \
-	lazymines.hiscore catalogs/template.ct convscorefile \#?.lha
+	lazymines.hiscore catalogs/template.ct \#?.lha
 
 archive:
 	makedir t:lazymines
@@ -84,7 +80,6 @@ archive:
 	copy install.info t:lazymines/
 	copy lazymines t:lazymines/
 	copy lazymines.info t:lazymines/
-	copy convscorefile t:lazymines/
 	copy lazymines.guide t:lazymines/
 	copy lazymines.guide.info t:lazymines/
 	makedir t:lazymines/catalogs
