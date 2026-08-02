@@ -1,0 +1,7 @@
+*.o
+*.lnk
+strings.h
+LazyMines
+Catalogs/*/
+LazyMines.hiscore
+convscorefile

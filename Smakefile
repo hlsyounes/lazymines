@@ -1,8 +1,9 @@
 .ct.catalog:
+   -makedir $*
    CatComp Catalogs/lazymines.cd $< CATALOG $@
 
 
-CFLAGS = optimize nochkabort math=ffp idir=myinclude: verbose
+CFLAGS = optimize nochkabort math=ffp verbose
 
 OBJS = lazymines.o button.o counter.o field.o highscores.o images.o layout.o \
        localize.o requesters.o timer.o tooltypes.o strings.o
@@ -25,11 +26,11 @@ all: LazyMines \
 LazyMines: $(OBJS)
    $(LD) FROM LIB:c.o $(OBJS) \
          TO LazyMines \
-         LIB LIB:scmffp.lib LIB:sc.lib LIB:amiga.lib MYLIB:chunkyiclass.lib \
+         LIB LIB:scmffp.lib LIB:sc.lib LIB:amiga.lib chunkyiclass.lib \
          STRIPDEBUG VERBOSE
 
 convscorefile: convscorefile.c
-   $(CC) verbose optimize link $<
+   $(CC) noicons verbose optimize link $<
 
 Catalogs/Norsk/lazymines.catalog: Catalogs/norsk.ct
 Catalogs/Polski/lazymines.catalog: Catalogs/polski.ct
@@ -58,6 +59,10 @@ localize.h: strings.o
 strings.o: Catalogs/lazymines.cd
    CatComp $< CFILE strings.h OBJFILE $@
 
+
+clean:
+   -delete ALL \#?.o \#?.lnk strings.h lazymines Catalogs/~(\#?.\#?) \
+   LazyMines.hiscore convscorefile
 
 backup:
    tar cf ram:lazymines3.0.tar $(CFILES) $(HFILES) $(LOCFILES) Smakefile

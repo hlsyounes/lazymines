@@ -11,7 +11,7 @@
 #include <proto/graphics.h>
 #include <proto/intuition.h>
 
-#include <chunkyiclass.h>
+#include "chunkyiclass.h"
 
 #include "display_globals.h"
 #include "layout.h"
