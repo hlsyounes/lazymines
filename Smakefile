@@ -9,3 +9,7 @@ LazyMines: $(OBJS)
 Minesweeper.o: Minesweeper.c field.h
 draw.o:        draw.c globals.h images.h
 field.o:       field.c field.h globals.h
+
+
+clean:
+	-delete ALL \#?.o LazyMines
