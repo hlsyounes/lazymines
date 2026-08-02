@@ -1,7 +1,9 @@
 *.o
 *.lnk
+util/*.lib
 strings.h
 lazymines
- atalogs/*/
+catalogs/template.ct
+catalogs/*/
 lazymines.hiscore
 convscorefile

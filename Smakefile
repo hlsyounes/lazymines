@@ -1,16 +1,14 @@
-##
-## Smakefile
-## =========
-## Makefile for lazymines.  Requires SAS/SMAKE.
-##
-## Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
-##
+# Makefile for lazymines.  Requires SAS/SMAKE.
+#
+# Copyright (C) 1994-1998 Håkan L. Younes
+# Copyright (C) 2026 Haakan Younes
+# SPDX-License-Identifier: MIT
 
 .ct.catalog:
 	-makedir $*
 	CatComp catalogs/lazymines.cd $< CATALOG $@
 
-CDEFINES = 
+CDEFINES =
 CDEBUGFLAGS = #debug=sf
 COPTFLAGS = opt optsched utillib
 CFLAGS = $(CDEFINES) $(CDEBUGFLAGS) $(COPTFLAGS) \
@@ -19,7 +17,8 @@ CFLAGS = $(CDEFINES) $(CDEBUGFLAGS) $(COPTFLAGS) \
 OBJS = lazymines.o button.o counter.o field.o highscores.o images.o layout.o \
        localize.o requesters.o timer.o tooltypes.o strings.o
 
-all: lazymines \
+all: util \
+     lazymines \
      convscorefile \
      catalogs/dansk/lazymines.catalog \
      catalogs/deutsch/lazymines.catalog \
@@ -29,10 +28,14 @@ all: lazymines \
      catalogs/svenska/lazymines.catalog \
      catalogs/template.ct
 
+util: FORCE
+	execute scripts/runsmake util
+
 lazymines: $(OBJS)
-	$(LD) FROM LIB:c.o $(OBJS) TO $@ \
-	LIB LIB:scmffp.lib LIB:sc.lib LIB:amiga.lib chunkyiclass.lib \
-	STRIPDEBUG
+	$(LD) from LIB:c.o $(OBJS) to $@ \
+	lib LIB:scmffp.lib LIB:sc.lib LIB:amiga.lib chunkyiclass.lib \
+	    util/util.lib \
+	batch noicons stripdebug define @__chkaborts=@__dummy
 
 convscorefile: convscorefile.c
 	$(CC) $(CFLAGS) link $<
@@ -70,11 +73,10 @@ localize.h: strings.o
 strings.o: catalogs/lazymines.cd
 	CatComp $< CFILE strings.h OBJFILE $@
 
-
-clean:
+clean: FORCE
+	execute scripts/runsmake util clean
 	-delete ALL \#?.o \#?.lnk strings.h lazymines catalogs/~(\#?.\#?) \
 	lazymines.hiscore catalogs/template.ct convscorefile \#?.lha
-
 
 archive:
 	makedir t:lazymines
@@ -96,3 +98,6 @@ archive:
 	copy misc/lazymines.guide.info t:lazymines/misc/
 	lha -aemqrx r lazymines.lha t:lazymines
 	delete ALL t:lazymines
+
+FORCE:
+	;

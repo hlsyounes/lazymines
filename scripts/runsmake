@@ -1,0 +1,9 @@
+; Script for running SAS/SMAKE in a subdirectory.
+;
+; Copyright (C) 2026 Haakan Younes
+; SPDX-License-Identifier: MIT
+.KEY DIR/A,TARGET
+.BRA [
+.KET ]
+cd [DIR]
+smake [TARGET]

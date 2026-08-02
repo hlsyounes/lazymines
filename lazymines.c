@@ -9,8 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include <time.h>
 
 #include <exec/types.h>
 #include <proto/exec.h>
@@ -34,7 +32,7 @@
 #include "game.h"
 #include "timer.h"
 #include "button.h"
-
+#include "util/random.h"
 
 #define PRG_NAME        "LazyMines"
 #define VERSION_NO      "3.2"
@@ -177,7 +175,7 @@ main (
    
    if (initialize ())
    {
-      srand48 (time (NULL));
+      RandSeedFromSysTime();
       load_high_scores (AUTHOR);
       event_loop ();
       save_high_scores ();

@@ -26,7 +26,7 @@
 
 
 #define HSMAGIC      "LZM#30HS"
-
+#define FILENAME     "lazymines.hiscore"
 #define NUM_SCORES   10
 
 
@@ -73,7 +73,7 @@ load_high_scores (
    int    i, j, k;
    
    
-   if (fh = Open ("lazymines.hiscore", MODE_OLDFILE))
+   if (fh = Open (FILENAME, MODE_OLDFILE))
    {
       Read (fh, check, sizeof (HSMAGIC));
       if (!strcmp (check, HSMAGIC))
@@ -102,7 +102,7 @@ save_high_scores (void)
    
    if (need_save)
    {
-      if (fh = Open ("LazyMines.hiscore", MODE_NEWFILE))
+      if (fh = Open (FILENAME, MODE_NEWFILE))
       {
          Write (fh, HSMAGIC, sizeof (HSMAGIC));
          for (i = 0; i < 2; ++i)
@@ -111,7 +111,7 @@ save_high_scores (void)
                   Write (fh, &hiscores[i][j][k], sizeof (hiscores[i][j][k]));
       
          Close (fh);
-         SetProtection ("LazyMines.hiscore", 2);
+         SetProtection (FILENAME, 2);
       }
    }
 }

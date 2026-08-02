@@ -1,0 +1,23 @@
+# Copyright (C) 2026 Haakan Younes
+# SPDX-License-Identifier: MIT
+
+.o.lib:
+	oml $(OMLFLAGS) $@ r $?
+
+CDEFINES = def=__USE_SYSBASE
+COPTFLAGS = opt optsched
+CFLAGS = $(CDEFINES) $(COPTFLAFS) \
+         ansi error=all noicons nostackcheck nostackext strict utilitylibrary \
+         parameters=both
+
+OMLFLAGS = -b -n
+
+all: util.lib
+
+util.lib: random.o timer.o
+
+random.o: random.c random.h
+timer.o: timer.c timer.h
+
+clean:
+	-delete ALL \#?.o \#?.lib

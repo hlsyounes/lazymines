@@ -6,7 +6,6 @@
  * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
  */
 
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +25,7 @@
 #include "counter.h"
 #include "game.h"
 #include "field.h"
-
+#include "util/random.h"
 
 struct field {
    struct RastPort  *rp;
@@ -247,7 +246,7 @@ avoid_trivial (
          r |= 4;
       if (r == 0)
       {
-         if ((int)(2 * drand48 ()) == 0)
+         if (RandUniform(0, 1) == 0)
             r |= 1;
          else
             r |= 2;
@@ -255,7 +254,7 @@ avoid_trivial (
       
       while (row0 == 0 && col0 == 0)
       {
-         rr = 3 * drand48 ();
+         rr = RandUniform(0, 2);
          if (r & (1 << rr))
          {
             row0 = (rr == 0) ? 0 : 1;
@@ -360,7 +359,7 @@ generate_path (
          
          if (count > 0)
          {
-            next_pos = possible_pos[(int)(count * drand48 ())];
+            next_pos = possible_pos[RandUniform(0, count - 1)];
             row = POS2ROW (field, next_pos);
             col = POS2COL (field, next_pos);
             PATH_CELL (field, row, col);
@@ -693,8 +692,8 @@ field_reset (
    
    while (n > 0)
    {
-      r = drand48 () * field->rows;
-      c = drand48 () * field->columns;
+      r = RandUniform(0, field->rows - 1);
+      c = RandUniform(0, field->columns - 1);
       if (!(IS_MINE (field, r, c) ||
             (IS_PATH (field, r, c) && chosen_task == SWEEP_PATH)))
       {
