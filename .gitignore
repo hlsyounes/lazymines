@@ -1,0 +1,7 @@
+*.o
+*.lnk
+strings.h
+lazymines
+ atalogs/*/
+lazymines.hiscore
+convscorefile

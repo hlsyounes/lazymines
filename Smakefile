@@ -72,8 +72,8 @@ strings.o: catalogs/lazymines.cd
 
 
 clean:
-	-delete ALL \#?.o strings.h lazymines catalogs/~(\#?.\#?) \
-	lazymines.hiscore catalogs/template.ct \#?.lha
+	-delete ALL \#?.o \#?.lnk strings.h lazymines catalogs/~(\#?.\#?) \
+	lazymines.hiscore catalogs/template.ct convscorefile \#?.lha
 
 
 archive:
