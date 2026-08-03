@@ -10,9 +10,10 @@
 
 CDEFINES =
 CDEBUGFLAGS = #debug=sf
-COPTFLAGS = opt optsched utillib
+COPTFLAGS = opt optsched
 CFLAGS = $(CDEFINES) $(CDEBUGFLAGS) $(COPTFLAGS) \
-         ansi nochkabort noicons nover nostkchk nostkext math=ffp
+         ansi error=all ignore=306 noicons noversion nostackcheck nostackext \
+         utilitylibrary math=ffp
 
 OBJS = lazymines.o button.o counter.o field.o highscores.o images.o layout.o \
        localize.o requesters.o timer.o tooltypes.o strings.o
@@ -34,7 +35,7 @@ lazymines: $(OBJS)
 	$(LD) from LIB:c.o $(OBJS) to $@ \
 	lib LIB:scmffp.lib LIB:sc.lib LIB:amiga.lib chunkyiclass.lib \
 	    util/util.lib \
-	batch noicons stripdebug define @__chkaborts=@__dummy
+	batch noicons quiet stripdebug define @__chkaborts=@__dummy
 
 catalogs/dansk/lazymines.catalog: catalogs/dansk.ct
 catalogs/deutsch/lazymines.catalog: catalogs/deutsch.ct

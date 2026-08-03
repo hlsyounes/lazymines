@@ -3,7 +3,9 @@
  * =======
  * Implements the minefield.
  *
- * Copyright (C) 1994-1998 Håkan L. Younes (lorens@hem.passagen.se)
+ * Copyright (C) 1994-1998 Håkan L. Younes
+ * Copyright (C) 2026 Haakan Younes
+ * SPDX-License-Identifier: MIT
  */
 
 #include <stdio.h>
@@ -310,7 +312,7 @@ generate_path (
    register WORD       r, c;
    UBYTE               row, col;
    UWORD               path_count, next_pos, possible_pos[8];
-   UBYTE               count, try_count = 0;
+   UBYTE               count = 0, try_count = 0;
    BOOL                done, failure = TRUE;
    
    char                msg[81];
@@ -401,8 +403,8 @@ generate_opening (
    UWORD            best_count = 0xFFFF, sweep_count, wanted_count;
    UWORD            pos, next;
    
-   
-   wanted_count = field->rows * field->columns * (auto_opening / 100.0);
+   /* Round to nearest integer. */
+   wanted_count = (field->rows * field->columns * auto_opening + 50) / 100;
    if (wanted_count == 0)
       wanted_count = 1;
    

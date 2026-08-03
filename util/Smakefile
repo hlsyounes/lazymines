@@ -7,8 +7,8 @@
 CDEFINES = def=__USE_SYSBASE
 COPTFLAGS = opt optsched
 CFLAGS = $(CDEFINES) $(COPTFLAFS) \
-         ansi error=all noicons nostackcheck nostackext strict utilitylibrary \
-         parameters=both
+         ansi error=all noicons noversion nostackcheck nostackext strict \
+         utilitylibrary parameters=both
 
 OMLFLAGS = -b -n
 
