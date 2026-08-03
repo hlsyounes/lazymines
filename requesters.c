@@ -200,7 +200,7 @@ about_requester (
    struct TextExtent   te;
    ULONG               box_w = 0, box_h = 0, win_w, win_h;
    LONG                temp;
-   STRPTR              name_str, ver_str, pos, next, real_pos;
+   STRPTR              name_str, ver_str = NULL, pos, next, real_pos;
    
    struct NewGadget    ng;
    struct Gadget      *gad_list, *ok_gad;
@@ -485,6 +485,27 @@ about_requester (
       free (ver_str);
 }
 
+UWORD GetMaxOptionalMines(void) {
+  UWORD cell_count =
+      levels[OPTIONAL_LEVEL].rows * levels[OPTIONAL_LEVEL].columns;
+
+  return (UWORD)((cell_count * 9 + 5) / 10);
+}
+
+static ULONG GetScaledBombShare(struct level *level) {
+  return ((ULONG)level->bombs << 16) / (level->rows * level->columns);
+}
+
+static void UpdateBombCount(struct level *level, ULONG scaled_bomb_share,
+                            UWORD max_bomb_count) {
+  level->bombs =
+      (scaled_bomb_share * level->rows * level->columns + (1L << 15)) >> 16;
+  if (level->bombs < MIN_MINES) {
+    level->bombs = MIN_MINES;
+  } else if (level->bombs > max_bomb_count) {
+    level->bombs = max_bomb_count;
+  }
+}
 
 void
 request_optional_size (
@@ -595,8 +616,7 @@ request_optional_size (
                            GTSL_MaxLevelLen, 4,
                            GTSL_LevelPlace, PLACETEXT_RIGHT,
                            TAG_DONE);
-   max_mines = levels[OPTIONAL_LEVEL].rows * levels[OPTIONAL_LEVEL].columns *
-               0.9;
+   max_mines = GetMaxOptionalMines();
    slider3 = CreateGadget (SLIDER_KIND, slider2, &ng3,
                            GTSL_Min, MIN_MINES, GTSL_Max, max_mines,
                            GTSL_Level, levels[OPTIONAL_LEVEL].bombs,
@@ -628,8 +648,7 @@ request_optional_size (
       {
          struct IntuiMessage  *msg;
          struct Gadget        *gad;
-         float                 mine_share;
-         
+         ULONG                 scaled_bomb_share;
          
          win_sleep = window_sleep (win, &req);
          SetAPen (req_win->RPort, gui_pens[SHINEPEN]);
@@ -650,10 +669,8 @@ request_optional_size (
          AddGList (req_win, gad_list, -1, -1, NULL);
          RefreshGList (gad_list, req_win, NULL, -1);
          GT_RefreshWindow (req_win, NULL);
-         
-         mine_share = (float)levels[OPTIONAL_LEVEL].bombs /
-                      levels[OPTIONAL_LEVEL].rows /
-                      levels[OPTIONAL_LEVEL].columns;
+
+         scaled_bomb_share = GetScaledBombShare(&levels[OPTIONAL_LEVEL]);
          while (!done)
          {
             WaitPort (req_win->UserPort);
@@ -669,15 +686,9 @@ request_optional_size (
                   if (gad == slider1)
                   {
                      levels[OPTIONAL_LEVEL].rows = msg->Code;
-                     max_mines = levels[OPTIONAL_LEVEL].rows *
-                                 levels[OPTIONAL_LEVEL].columns * 0.9;
-                     levels[OPTIONAL_LEVEL].bombs = mine_share *
-                                               levels[OPTIONAL_LEVEL].rows *
-                                               levels[OPTIONAL_LEVEL].columns;
-                     if (levels[OPTIONAL_LEVEL].bombs > max_mines)
-                        levels[OPTIONAL_LEVEL].bombs = max_mines;
-                     else if (levels[OPTIONAL_LEVEL].bombs < MIN_MINES)
-                        levels[OPTIONAL_LEVEL].bombs = MIN_MINES;
+                     max_mines = GetMaxOptionalMines();
+                     UpdateBombCount(&levels[OPTIONAL_LEVEL], scaled_bomb_share,
+                                     max_mines);
                      GT_SetGadgetAttrs (slider3, req_win, NULL,
                                      GTSL_Max, max_mines,
                                      GTSL_Level, levels[OPTIONAL_LEVEL].bombs,
@@ -686,26 +697,19 @@ request_optional_size (
                   else if (gad == slider2)
                   {
                      levels[OPTIONAL_LEVEL].columns = msg->Code;
-                     max_mines = levels[OPTIONAL_LEVEL].rows *
-                                 levels[OPTIONAL_LEVEL].columns * 0.9;
-                     levels[OPTIONAL_LEVEL].bombs = mine_share *
-                                               levels[OPTIONAL_LEVEL].rows *
-                                               levels[OPTIONAL_LEVEL].columns;
-                     if (levels[OPTIONAL_LEVEL].bombs > max_mines)
-                        levels[OPTIONAL_LEVEL].bombs = max_mines;
-                     else if (levels[OPTIONAL_LEVEL].bombs < MIN_MINES)
-                        levels[OPTIONAL_LEVEL].bombs = MIN_MINES;
+                     max_mines = GetMaxOptionalMines();
+                     UpdateBombCount(&levels[OPTIONAL_LEVEL], scaled_bomb_share,
+                                     max_mines);
                      GT_SetGadgetAttrs (slider3, req_win, NULL,
                                      GTSL_Max, max_mines,
                                      GTSL_Level, levels[OPTIONAL_LEVEL].bombs,
                                      TAG_DONE);
                   }
-                  else if (gad == slider3)
+                  else if (gad == slider3) {
                      levels[OPTIONAL_LEVEL].bombs = msg->Code;
-                  
-                  mine_share = (float)levels[OPTIONAL_LEVEL].bombs /
-                               levels[OPTIONAL_LEVEL].rows /
-                               levels[OPTIONAL_LEVEL].columns;
+                     scaled_bomb_share =
+                         GetScaledBombShare(&levels[OPTIONAL_LEVEL]);
+                  }
                   break;
                case IDCMP_REFRESHWINDOW:
                   GT_BeginRefresh (req_win);

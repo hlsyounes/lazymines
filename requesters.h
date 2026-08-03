@@ -76,4 +76,9 @@ void
 request_autoopening (
    struct Window  *win);
 
+/*
+ * Returns the maximum number of mines allowed for the optional level.
+ */
+UWORD GetMaxOptionalMines(void);
+
 #endif /* REQUESTERS_H */

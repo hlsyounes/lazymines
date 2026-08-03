@@ -801,6 +801,8 @@ init_display (void)
          init_pens (pub_screen);
          if (layout_display (pub_screen, &use_romfont))
          {
+            UWORD max_mines = GetMaxOptionalMines();
+
             if (levels[OPTIONAL_LEVEL].rows < MIN_ROWS)
                levels[OPTIONAL_LEVEL].rows = MIN_ROWS;
             else if (levels[OPTIONAL_LEVEL].rows > max_rows)
@@ -811,13 +813,9 @@ init_display (void)
                levels[OPTIONAL_LEVEL].columns = max_columns;
             if (levels[OPTIONAL_LEVEL].bombs < MIN_MINES)
                levels[OPTIONAL_LEVEL].bombs = MIN_MINES;
-            else if (levels[OPTIONAL_LEVEL].bombs >
-                     levels[OPTIONAL_LEVEL].rows *
-                     levels[OPTIONAL_LEVEL].columns * 0.9)
+            else if (levels[OPTIONAL_LEVEL].bombs > max_mines)
             {
-               levels[OPTIONAL_LEVEL].bombs = levels[OPTIONAL_LEVEL].rows *
-                                              levels[OPTIONAL_LEVEL].columns *
-                                              0.9;
+               levels[OPTIONAL_LEVEL].bombs = max_mines;
             }
             if (use_romfont)
             {
